@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.context.ApplicationContext
 import org.springframework.http.HttpMethod
@@ -36,6 +37,8 @@ class AdminApiIntegrationTest @Autowired constructor(
     private val operatorRepository: OperatorRepository,
     private val groupRepository: GroupRepository,
     private val operatorGroupRepository: OperatorGroupRepository,
+    @Value("\${ejabberd.username}") var username: String,
+    @Value("\${ejabberd.password}") val password: String,
 ) {
 
     private val log = LoggerFactory.getLogger(AdminApiIntegrationTest::class.java)
@@ -44,7 +47,7 @@ class AdminApiIntegrationTest @Autowired constructor(
     private val base: String
         get() = "http://localhost:${applicationContext.environment.getProperty("local.server.port")}"
     private val authorization: String
-        get() = "Basic ${Base64.getEncoder().encodeToString("admin@localhost:admin".toByteArray())}"
+        get() = "Basic ${Base64.getEncoder().encodeToString("$username:$password".toByteArray())}"
 
     private var xmppUser: String? = null
     private var room: String? = null

@@ -24,7 +24,7 @@ class OperatorServiceTest {
     @Test
     fun registersXmppUserBeforePersistingOperator() {
         Mockito.`when`(operatorRepository.findAll()).thenReturn(emptyList())
-        val saved = Operator(name = "John Doe")
+        val saved = Operator(name = "John Doe", username = "johndoe")
         Mockito.`when`(operatorRepository.save(Mockito.any(Operator::class.java))).thenReturn(saved)
 
         val response = service.register("John Doe", "pw123")
@@ -41,7 +41,7 @@ class OperatorServiceTest {
     @Test
     fun generatesPasswordWhenOmitted() {
         Mockito.`when`(operatorRepository.findAll()).thenReturn(emptyList())
-        val saved = Operator(name = "John Doe")
+        val saved = Operator(name = "John Doe", username = "johndoe")
         Mockito.`when`(operatorRepository.save(Mockito.any(Operator::class.java))).thenReturn(saved)
 
         val response = service.register("John Doe", null)
@@ -53,7 +53,7 @@ class OperatorServiceTest {
 
     @Test
     fun rejectsOperatorWithTakenXmppUser() {
-        Mockito.`when`(operatorRepository.findAll()).thenReturn(listOf(Operator(name = "John Doe")))
+        Mockito.`when`(operatorRepository.findAll()).thenReturn(listOf(Operator(name = "John Doe", username = "johndoe")))
 
         assertFailsWith<ConflictException> { service.register("john doe", "pw") }
 

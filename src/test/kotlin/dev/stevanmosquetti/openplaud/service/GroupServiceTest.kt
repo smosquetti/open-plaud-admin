@@ -28,7 +28,7 @@ class GroupServiceTest {
 
     private val operatorId = UUID.randomUUID()
     private val groupId = UUID.randomUUID()
-    private val operator = Operator(name = "John Doe", id = operatorId)
+    private val operator = Operator(name = "John Doe", id = operatorId, username = "johndoe")
     private val group = Group(name = "Support Team", service = "supportservice", id = groupId)
 
     @BeforeEach

@@ -29,7 +29,7 @@ class OperatorService(
         val actualPassword = password ?: generatePassword()
         ejabberd.registerUser(xmppUser, actualPassword)
         val operator = try {
-            operatorRepository.save(Operator(name = name))
+            operatorRepository.save(Operator(name = name, username = xmppUser))
         } catch (dbError: RuntimeException) {
             cleanupAfterDbFailure(xmppUser, dbError)
             throw dbError
