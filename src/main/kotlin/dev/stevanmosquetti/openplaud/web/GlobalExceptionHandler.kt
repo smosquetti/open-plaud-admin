@@ -36,7 +36,7 @@ class GlobalExceptionHandler {
     @ExceptionHandler(EjabberdException::class)
     fun handleEjabberd(e: EjabberdException, request: HttpServletRequest): ResponseEntity<ApiError> {
         log.warn("ejabberd API error on {} {}: {}", request.method, request.requestURI, e.message)
-        return respond(HttpStatus.BAD_GATEWAY, "ejabberd_error", e.message ?: "ejabberd error")
+        return respond(HttpStatus.valueOf(e.statusCode.value()), "ejabberd_error", e.message ?: "ejabberd error")
     }
 
     @ExceptionHandler(MethodArgumentNotValidException::class)

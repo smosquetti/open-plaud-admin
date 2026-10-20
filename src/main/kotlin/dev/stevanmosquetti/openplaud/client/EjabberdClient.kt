@@ -1,7 +1,6 @@
 package dev.stevanmosquetti.openplaud.client
 
 import jakarta.servlet.http.HttpServletRequest
-import java.util.Base64
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
@@ -152,6 +151,6 @@ class EjabberdClient(
             null
         }
         val message = (errorBody?.get("message") as? String) ?: "Unknown ejabberd error"
-        return EjabberdException(message)
+        return EjabberdException(message, response.statusCode, response.statusText)
     }
 }
