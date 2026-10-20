@@ -1,0 +1,128 @@
+package dev.stevanmosquetti.openplaud.client
+
+import com.sun.net.httpserver.HttpServer
+import jakarta.servlet.http.HttpServletRequest
+import kotlin.test.assertFailsWith
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Test
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.`when`
+import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.web.context.request.RequestContextHolder
+import org.springframework.web.context.request.ServletRequestAttributes
+import tools.jackson.databind.ObjectMapper
+import java.net.InetSocketAddress
+import java.net.http.HttpClient
+import java.util.Base64
+import java.util.concurrent.atomic.AtomicReference
+
+/**
+ * Pins the mod_http_api wire contract: POST /api/<command>, Basic auth, flat JSON body.
+ * A local HTTP server captures the outgoing requests; no real ejabberd is needed.
+ */
+class EjabberdClientTest {
+
+    private class CapturedRequest(val path: String, val authorization: String?, val body: String)
+
+    private val objectMapper = ObjectMapper()
+    private val captured = AtomicReference<CapturedRequest?>(null)
+    private val nextStatus = java.util.concurrent.atomic.AtomicInteger(200)
+    private val nextBody = AtomicReference("")
+    private var server: HttpServer? = null
+    private lateinit var client: EjabberdClient
+    private val authorization: String
+        get() = "Basic " + Base64.getEncoder().encodeToString("admin@localhost:admin".toByteArray())
+
+    @BeforeEach
+    fun startServer() {
+        val mockServletRequest = MockHttpServletRequest()
+        mockServletRequest.addHeader("Authorization", authorization)
+        RequestContextHolder.setRequestAttributes(ServletRequestAttributes(mockServletRequest))
+
+        server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
+            createContext("/") { exchange ->
+                val body = exchange.requestBody.reader(Charsets.UTF_8).readText()
+                captured.set(
+                    CapturedRequest(
+                        exchange.requestURI.path,
+                        exchange.requestHeaders.getFirst("Authorization"),
+                        body,
+                    ),
+                )
+                val payload = nextBody.get().toByteArray()
+                exchange.responseHeaders.add("Content-Type", "application/json")
+                exchange.sendResponseHeaders(nextStatus.get(), payload.size.toLong())
+                exchange.responseBody.use { it.write(payload) }
+            }
+        }
+        server!!.start()
+        val address = server!!.address
+        client = EjabberdClient(
+            "http://${address.hostName}:${address.port}/api",
+            "localhost",
+        )
+
+    }
+
+    @AfterEach
+    fun stopServer() {
+        server?.stop(0)
+    }
+
+    private fun lastRequest(): CapturedRequest = captured.get()
+        ?: error("No request captured")
+
+    @Test
+    fun registerPostsFlatJsonWithBasicAuth() {
+        client.registerUser("johndoe", "secret")
+
+        val request = lastRequest()
+        assertEquals("/api/register", request.path)
+        assertEquals(authorization, request.authorization)
+
+        val json = objectMapper.readTree(request.body)
+        assertEquals("johndoe", json.get("user")?.asText())
+        assertEquals("localhost", json.get("host")?.asText())
+        assertEquals("secret", json.get("password")?.asText())
+    }
+
+    @Test
+    fun createRoomPostsPersistentOption() {
+        client.createPersistentRoom("support", "supportservice")
+
+        val request = lastRequest()
+        assertEquals("/api/create_room_with_opts", request.path)
+        val json = objectMapper.readTree(request.body)
+        assertEquals("support", json.get("room")?.asText())
+        assertEquals("supportservice", json.get("service")?.asText())
+        assertEquals("localhost", json.get("host")?.asText())
+        val option = json.get("options")?.get(0)
+        assertEquals("persistent", option?.get("name")?.asText())
+        assertEquals("true", option?.get("value")?.asText())
+    }
+
+    @Test
+    fun setRoomAffiliationPostsRoomUserAndAffiliation() {
+        client.setRoomAffiliation("support", "supportservice", "johndoe")
+
+        val request = lastRequest()
+        assertEquals("/api/set_room_affiliation", request.path)
+        val json = objectMapper.readTree(request.body)
+        assertEquals("support", json.get("room")?.asText())
+        assertEquals("supportservice", json.get("service")?.asText())
+        assertEquals("johndoe", json.get("user")?.asText())
+        assertEquals("localhost", json.get("host")?.asText())
+        assertEquals("member", json.get("affiliation")?.asText())
+    }
+
+    @Test
+    fun errorResponseThrowsWithServerMessage() {
+        nextStatus.set(500)
+        nextBody.set("""{"message":"User already exists"}""")
+
+        val error = assertFailsWith<EjabberdException> { client.registerUser("johndoe", "secret") }
+        assertEquals("User already exists", error.message)
+    }
+}
