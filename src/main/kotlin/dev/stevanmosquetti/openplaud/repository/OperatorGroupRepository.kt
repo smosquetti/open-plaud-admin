@@ -13,4 +13,10 @@ interface OperatorGroupRepository : JpaRepository<OperatorGroup, OperatorGroupId
        FROM OperatorGroup o WHERE o.id.operatorId = :operatorId AND o.id.groupId = :groupId
     """)
     fun existsByOperatorIdAndGroupId(operatorId: UUID, groupId: UUID): Boolean
+
+    @Query("""
+       SELECT o.id.operatorId 
+       FROM OperatorGroup o WHERE o.id.groupId = :groupId
+    """)
+    fun listOperatorsByGroupId(groupId: UUID): List<UUID>
 }

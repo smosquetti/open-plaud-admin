@@ -13,5 +13,8 @@ class Operator(
     val id: UUID = UUID.randomUUID(),
 
     @Column(nullable = false)
-    val name: String
+    val name: String,
+
+    @Column(nullable = false)
+    val username: String
 )
