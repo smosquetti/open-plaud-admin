@@ -1,20 +1,16 @@
 package dev.stevanmosquetti.openplaud.client
 
 import com.sun.net.httpserver.HttpServer
-import jakarta.servlet.http.HttpServletRequest
 import kotlin.test.assertFailsWith
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.`when`
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.ServletRequestAttributes
 import tools.jackson.databind.ObjectMapper
 import java.net.InetSocketAddress
-import java.net.http.HttpClient
 import java.util.Base64
 import java.util.concurrent.atomic.AtomicReference
 
