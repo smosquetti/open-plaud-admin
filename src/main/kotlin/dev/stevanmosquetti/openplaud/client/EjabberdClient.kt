@@ -54,11 +54,12 @@ class EjabberdClient(
 
     fun createRoom(room: String, service: String, authorization: String? = "") {
         postForStatus(
-            "create_room",
+            "create_room_with_opts",
             mapOf(
                 "room" to room,
                 "service" to service,
-                "host" to host
+                "host" to host,
+                "options" to listOf(mapOf("name" to "members_only", "value" to "true")),
             ),
             getAuthorizationHeader()?: authorization,
         )
@@ -71,7 +72,9 @@ class EjabberdClient(
                 "room" to room,
                 "service" to service,
                 "host" to host,
-                "options" to listOf(mapOf("name" to "persistent", "value" to "true")),
+                "options" to listOf(
+                    mapOf("name" to "persistent", "value" to "true"),
+                    mapOf("name" to "members_only", "value" to "true")),
             ),
             getAuthorizationHeader()?: authorization,
         )
