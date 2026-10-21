@@ -56,7 +56,7 @@ class TempRoomService(
                     room,
                     service?: mucService,
                     operatorRepository.getUsernameById(uuid),
-                    "none")
+                    "outcast")
             }
     }
 
