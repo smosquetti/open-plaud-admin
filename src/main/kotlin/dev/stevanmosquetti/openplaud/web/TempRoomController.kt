@@ -18,7 +18,7 @@ class TempRoomController(
 ) {
 
     @PostMapping("/chatroom")
-    fun createOperator(@Valid @RequestBody request: CreateTempRoomRequest): ResponseEntity<CreateTempRoomResponse> {
+    fun createChatroom(@Valid @RequestBody request: CreateTempRoomRequest): ResponseEntity<CreateTempRoomResponse> {
         return ResponseEntity.status(HttpStatus.CREATED).body(tempRoomService.create(request.user, request.groupId, request.service))
     }
 }
