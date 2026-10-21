@@ -2,6 +2,7 @@ package dev.stevanmosquetti.openplaud.web
 
 import dev.stevanmosquetti.openplaud.dto.CreateTempRoomRequest
 import dev.stevanmosquetti.openplaud.dto.CreateTempRoomResponse
+import dev.stevanmosquetti.openplaud.dto.JoinChatroomRequest
 import dev.stevanmosquetti.openplaud.service.TempRoomService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -20,5 +21,11 @@ class TempRoomController(
     @PostMapping("/chatroom")
     fun createChatroom(@Valid @RequestBody request: CreateTempRoomRequest): ResponseEntity<CreateTempRoomResponse> {
         return ResponseEntity.status(HttpStatus.CREATED).body(tempRoomService.create(request.user, request.groupId, request.service))
+    }
+    
+    @PostMapping("/join")
+    fun joinChatroom(@Valid @RequestBody request: JoinChatroomRequest): ResponseEntity<Unit> {
+        tempRoomService.removeAllOtherOperators(request.operatorId, request.groupId, request.room, request.service)
+        return ResponseEntity.status(HttpStatus.OK).build()
     }
 }

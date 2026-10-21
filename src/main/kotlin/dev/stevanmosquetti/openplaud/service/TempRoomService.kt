@@ -56,8 +56,7 @@ class TempRoomService(
                     room,
                     service?: mucService,
                     operatorRepository.getUsernameById(uuid),
-                    "none",
-                    authorization)
+                    "none")
             }
     }
 

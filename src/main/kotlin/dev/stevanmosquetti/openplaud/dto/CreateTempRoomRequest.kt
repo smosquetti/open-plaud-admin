@@ -7,7 +7,9 @@ import java.util.UUID
 data class CreateTempRoomRequest(
     @NotBlank
     val user: String,
+    
     @NotNull
     val groupId: UUID,
+    
     val service: String? = null,
 )
