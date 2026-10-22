@@ -40,7 +40,7 @@ class TempRoomService(
                     room,
                     service?: mucService,
                     operatorRepository.getUsernameById(uuid),
-                    "member",
+                    "admin",
                     authorization)
             }
 
