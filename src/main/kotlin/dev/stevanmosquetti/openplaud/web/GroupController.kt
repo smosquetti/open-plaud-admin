@@ -54,7 +54,7 @@ class GroupController(
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build()
     }
 
-    @DeleteMapping()
+    @DeleteMapping("/groups/{groupId}")
     fun removeRoom(@PathVariable groupId: UUID): ResponseEntity<Unit> {
         groupService.removeRoom(groupId)
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build()
