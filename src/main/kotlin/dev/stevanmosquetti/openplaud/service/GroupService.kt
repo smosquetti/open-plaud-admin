@@ -35,7 +35,7 @@ class GroupService(
         val room = slugify(name)
         requireRoomFree(room)
         ejabberd.createPersistentRoom(room, service)
-        val groupEntity = Group(name = name, service = service)
+        val groupEntity = Group(name = name, node = room, service = service)
         val group = try {
             groupRepository.save(groupEntity)
         } catch (dbError: RuntimeException) {

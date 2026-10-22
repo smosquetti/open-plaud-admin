@@ -16,5 +16,8 @@ class Group(
     val name: String,
 
     @Column(nullable = false)
+    val node: String,
+
+    @Column(nullable = false)
     val service: String,
 )
