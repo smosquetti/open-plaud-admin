@@ -121,4 +121,75 @@ class EjabberdClientTest {
         val error = assertFailsWith<EjabberdException> { client.registerUser("johndoe", "secret") }
         assertEquals("User already exists", error.message)
     }
+
+    @Test
+    fun errorWithoutJsonBodyFallsBackToUnknownMessage() {
+        nextStatus.set(500)
+        nextBody.set("not json at all")
+
+        val error = assertFailsWith<EjabberdException> { client.registerUser("johndoe", "secret") }
+        assertEquals("Unknown ejabberd error", error.message)
+    }
+
+    @Test
+    fun unregisterPostsUserAndHost() {
+        client.unregisterUser("johndoe")
+
+        val request = lastRequest()
+        assertEquals("/api/unregister", request.path)
+        val json = objectMapper.readTree(request.body)
+        assertEquals("johndoe", json.get("user")?.asText())
+        assertEquals("localhost", json.get("host")?.asText())
+    }
+
+    @Test
+    fun createRoomPostsMembersOnlyOption() {
+        client.createRoom("johndoe", "support")
+
+        val request = lastRequest()
+        assertEquals("/api/create_room_with_opts", request.path)
+        val json = objectMapper.readTree(request.body)
+        assertEquals("johndoe", json.get("room")?.asText())
+        assertEquals("support", json.get("service")?.asText())
+        assertEquals("localhost", json.get("host")?.asText())
+        val option = json.get("options")?.get(0)
+        assertEquals("members_only", option?.get("name")?.asText())
+        assertEquals("true", option?.get("value")?.asText())
+        assertEquals(1, json.get("options").size())
+    }
+
+    @Test
+    fun destroyPostsRoomAndService() {
+        client.destroyRoom("support", "supportservice")
+
+        val request = lastRequest()
+        assertEquals("/api/destroy_room", request.path)
+        val json = objectMapper.readTree(request.body)
+        assertEquals("support", json.get("room")?.asText())
+        assertEquals("supportservice", json.get("service")?.asText())
+    }
+
+    @Test
+    fun getRoomAffiliationPostsJidAndStripsQuotes() {
+        nextBody.set("\"member\"")
+
+        val result = client.getRoomAffiliation("support", "supportservice", "johndoe@localhost")
+
+        assertEquals("member", result)
+        val request = lastRequest()
+        assertEquals("/api/get_room_affiliation", request.path)
+        val json = objectMapper.readTree(request.body)
+        assertEquals("support", json.get("room")?.asText())
+        assertEquals("supportservice", json.get("service")?.asText())
+        assertEquals("johndoe@localhost", json.get("jid")?.asText())
+    }
+
+    @Test
+    fun fallsBackToExplicitAuthorizationWithoutRequestContext() {
+        RequestContextHolder.resetRequestAttributes()
+
+        client.registerUser("johndoe", "secret", "Basic explicit")
+
+        assertEquals("Basic explicit", lastRequest().authorization)
+    }
 }

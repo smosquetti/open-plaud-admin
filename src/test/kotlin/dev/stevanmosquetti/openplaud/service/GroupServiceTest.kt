@@ -171,4 +171,38 @@ class GroupServiceTest {
 
         Mockito.verifyNoInteractions(ejabberd)
     }
+
+    @Test
+    fun removeRoomClearsMembershipsThenDestroysRoomByNode() {
+        Mockito.`when`(groupRepository.findById(groupId)).thenReturn(Optional.of(group))
+
+        service.removeRoom(groupId)
+
+        val inOrder = Mockito.inOrder(operatorGroupRepository, groupRepository, ejabberd)
+        inOrder.verify(operatorGroupRepository).deleteByGroup(groupId)
+        inOrder.verify(groupRepository).deleteById(groupId)
+        inOrder.verify(ejabberd).destroyRoom("supportteam", "supportservice")
+    }
+
+    @Test
+    fun removeRoomRejectsUnknownGroup() {
+        Mockito.`when`(groupRepository.findById(groupId)).thenReturn(Optional.empty())
+
+        assertFailsWith<NotFoundException> { service.removeRoom(groupId) }
+
+        Mockito.verifyNoInteractions(ejabberd)
+        Mockito.verifyNoInteractions(operatorGroupRepository)
+    }
+
+    @Test
+    fun createPropagatesDatabaseErrorWhenCompensationDestroyFails() {
+        Mockito.`when`(groupRepository.findAll()).thenReturn(emptyList())
+        val dbError = RuntimeException("database down")
+        Mockito.`when`(groupRepository.save(Mockito.any(Group::class.java))).thenThrow(dbError)
+        Mockito.`doThrow`(RuntimeException("xmpp down")).`when`(ejabberd).destroyRoom("supportteam", "supportservice")
+
+        val error = assertFailsWith<RuntimeException> { service.create("Support Team", "supportservice") }
+
+        assertSame(dbError, error)
+    }
 }

@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
+import java.util.Optional
+import java.util.UUID
 
 class OperatorServiceTest {
 
@@ -84,5 +86,53 @@ class OperatorServiceTest {
         val inOrder = Mockito.inOrder(ejabberd)
         inOrder.verify(ejabberd).registerUser("johndoe", "pw")
         inOrder.verify(ejabberd).unregisterUser("johndoe")
+    }
+
+    @Test
+    fun removeOperatorDeletesRowsThenUnregistersXmppUser() {
+        val saved = Operator(name = "John Doe", email = "johndoe@email.com", username = "johndoe")
+        Mockito.`when`(operatorRepository.findById(saved.id)).thenReturn(Optional.of(saved))
+
+        service.removeOperator(saved.id)
+
+        val inOrder = Mockito.inOrder(operatorGroupRepository, operatorRepository, ejabberd)
+        inOrder.verify(operatorGroupRepository).deleteByOperator(saved.id)
+        inOrder.verify(operatorRepository).deleteById(saved.id)
+        inOrder.verify(ejabberd).unregisterUser("johndoe")
+    }
+
+    @Test
+    fun removeOperatorRejectsUnknownOperator() {
+        val operatorId = UUID.randomUUID()
+        Mockito.`when`(operatorRepository.findById(operatorId)).thenReturn(Optional.empty())
+
+        assertFailsWith<NotFoundException> { service.removeOperator(operatorId) }
+
+        Mockito.verifyNoInteractions(ejabberd)
+        Mockito.verifyNoInteractions(operatorGroupRepository)
+    }
+
+    @Test
+    fun removeOperatorDeletesRowsBeforeUnregisterFailure() {
+        val saved = Operator(name = "John Doe", email = "johndoe@email.com", username = "johndoe")
+        Mockito.`when`(operatorRepository.findById(saved.id)).thenReturn(Optional.of(saved))
+        Mockito.`doThrow`(RuntimeException("xmpp down")).`when`(ejabberd).unregisterUser("johndoe")
+
+        assertFailsWith<RuntimeException> { service.removeOperator(saved.id) }
+
+        Mockito.verify(operatorGroupRepository).deleteByOperator(saved.id)
+        Mockito.verify(operatorRepository).deleteById(saved.id)
+    }
+
+    @Test
+    fun registerPropagatesDatabaseErrorWhenCompensationUnregisterFails() {
+        Mockito.`when`(operatorRepository.findAll()).thenReturn(emptyList())
+        val dbError = RuntimeException("database down")
+        Mockito.`when`(operatorRepository.save(Mockito.any(Operator::class.java))).thenThrow(dbError)
+        Mockito.`doThrow`(RuntimeException("xmpp down")).`when`(ejabberd).unregisterUser("johndoe")
+
+        val error = assertFailsWith<RuntimeException> { service.register("John Doe", "johndoe@email.com", "pw") }
+
+        assertSame(dbError, error)
     }
 }
