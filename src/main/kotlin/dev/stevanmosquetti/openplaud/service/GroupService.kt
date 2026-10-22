@@ -84,7 +84,7 @@ class GroupService(
         val group = requireGroup(groupId)
         operatorGroupRepository.deleteByGroup(group.id)
         groupRepository.deleteById(group.id)
-        ejabberd.destroyRoom(group.name, group.service)
+        ejabberd.destroyRoom(group.node, group.service)
     }
 
     private fun requireGroup(groupId: UUID): Group =

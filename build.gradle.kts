@@ -5,6 +5,7 @@ plugins {
     id("io.spring.dependency-management") version "1.1.7"
     kotlin("kapt") version "2.3.21"
     kotlin("plugin.jpa") version "2.3.21"
+    jacoco
 }
 
 group = "dev.stevanmosquetti"
