@@ -16,5 +16,8 @@ class Operator(
     val name: String,
 
     @Column(nullable = false)
-    val username: String
+    val username: String,
+
+    @Column(nullable = false)
+    val email: String
 )

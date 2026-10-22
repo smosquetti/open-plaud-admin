@@ -54,6 +54,10 @@ class GroupController(
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build()
     }
 
+    /**
+     * Removes a group: remove the MUC on ejabberd
+     * and deletes the `groups` row.
+     */
     @DeleteMapping("/groups/{groupId}")
     fun removeRoom(@PathVariable groupId: UUID): ResponseEntity<Unit> {
         groupService.removeRoom(groupId)

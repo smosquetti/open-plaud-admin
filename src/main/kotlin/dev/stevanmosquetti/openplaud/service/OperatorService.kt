@@ -3,11 +3,13 @@ package dev.stevanmosquetti.openplaud.service
 import dev.stevanmosquetti.openplaud.client.EjabberdClient
 import dev.stevanmosquetti.openplaud.dto.OperatorResponse
 import dev.stevanmosquetti.openplaud.entity.Operator
+import dev.stevanmosquetti.openplaud.repository.OperatorGroupRepository
 import dev.stevanmosquetti.openplaud.repository.OperatorRepository
 import dev.stevanmosquetti.openplaud.slugify.Slugifier
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.security.SecureRandom
+import java.util.UUID
 
 /**
  * Registers operators: a new XMPP user on ejabberd and a row in the `operators` table.
@@ -18,18 +20,19 @@ import java.security.SecureRandom
 @Service
 class OperatorService(
     private val operatorRepository: OperatorRepository,
+    private val operatorGroupRepository: OperatorGroupRepository,
     private val ejabberd: EjabberdClient,
 ) {
 
     private val log = LoggerFactory.getLogger(OperatorService::class.java)
 
-    fun register(name: String, password: String?): OperatorResponse {
+    fun register(name: String, email: String, password: String?): OperatorResponse {
         val xmppUser = slugify(name)
         requireXmppUserFree(xmppUser)
         val actualPassword = password ?: generatePassword()
         ejabberd.registerUser(xmppUser, actualPassword)
         val operator = try {
-            operatorRepository.save(Operator(name = name, username = xmppUser))
+            operatorRepository.save(Operator(name = name, username = xmppUser, email = email))
         } catch (dbError: RuntimeException) {
             cleanupAfterDbFailure(xmppUser, dbError)
             throw dbError
@@ -37,6 +40,7 @@ class OperatorService(
         return OperatorResponse(
             id = operator.id,
             name = operator.name,
+            email = operator.email,
             xmppUser = xmppUser,
             initialPassword = actualPassword,
         )
@@ -57,6 +61,17 @@ class OperatorService(
             log.error("Compensating unregister for '$xmppUser' also failed; the user is orphaned on the XMPP server", e)
         }
     }
+    
+    fun removeOperator(operatorId: UUID) {
+        val operator = requireOperator(operatorId)
+        operatorGroupRepository.deleteByOperator(operator.id)
+        operatorRepository.deleteById(operator.id)
+        ejabberd.unregisterUser(operator.username)
+    }
+
+    private fun requireOperator(operatorId: UUID): Operator =
+        operatorRepository.findById(operatorId)
+            .orElseThrow { NotFoundException("Operator $operatorId not found") }
 
     private fun slugify(name: String): String = try {
         Slugifier.slugify(name)

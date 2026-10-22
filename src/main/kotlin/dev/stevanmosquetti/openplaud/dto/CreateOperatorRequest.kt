@@ -5,6 +5,9 @@ import jakarta.validation.constraints.NotBlank
 data class CreateOperatorRequest(
     @NotBlank
     val name: String,
+    
+    @NotBlank
+    val email: String,
 
     /**
      * XMPP login password for the new user. Optional — when omitted, the server

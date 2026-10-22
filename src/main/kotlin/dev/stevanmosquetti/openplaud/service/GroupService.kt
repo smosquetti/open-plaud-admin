@@ -82,6 +82,8 @@ class GroupService(
 
     fun removeRoom(groupId: UUID) {
         val group = requireGroup(groupId)
+        operatorGroupRepository.deleteByGroup(group.id)
+        groupRepository.deleteById(group.id)
         ejabberd.destroyRoom(group.name, group.service)
     }
 

@@ -6,10 +6,13 @@ import dev.stevanmosquetti.openplaud.service.OperatorService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import java.util.UUID
 
 @RestController
 @RequestMapping("/api/v1")
@@ -23,5 +26,11 @@ class OperatorController(
      */
     @PostMapping("/operators")
     fun createOperator(@Valid @RequestBody request: CreateOperatorRequest): ResponseEntity<OperatorResponse> =
-        ResponseEntity.status(HttpStatus.CREATED).body(operatorService.register(request.name, request.password))
+        ResponseEntity.status(HttpStatus.CREATED).body(operatorService.register(request.name, request.email, request.password))
+
+    @DeleteMapping("/operators/{operatorId}")
+    fun deleteOperator(@PathVariable operatorId: UUID): ResponseEntity<Unit> {
+        operatorService.removeOperator(operatorId)
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build()
+    }
 }

@@ -45,8 +45,8 @@ class TempRoomServiceTest {
         val inOrder = Mockito.inOrder(ejabberd)
         inOrder.verify(ejabberd).createRoom("johndoe", "support", authorization)
         inOrder.verify(ejabberd).setRoomAffiliation("johndoe", "support", "John Doe", "member", authorization)
-        inOrder.verify(ejabberd).setRoomAffiliation("johndoe", "support", "other_a", "member", authorization)
-        inOrder.verify(ejabberd).setRoomAffiliation("johndoe", "support", "other_b", "member", authorization)
+        inOrder.verify(ejabberd).setRoomAffiliation("johndoe", "support", "other_a", "admin", authorization)
+        inOrder.verify(ejabberd).setRoomAffiliation("johndoe", "support", "other_b", "admin", authorization)
         assertEquals(CreateTempRoomResponse("johndoe", "support"), response)
     }
 

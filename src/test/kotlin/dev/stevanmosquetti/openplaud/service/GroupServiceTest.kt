@@ -28,8 +28,8 @@ class GroupServiceTest {
 
     private val operatorId = UUID.randomUUID()
     private val groupId = UUID.randomUUID()
-    private val operator = Operator(name = "John Doe", id = operatorId, username = "johndoe")
-    private val group = Group(name = "Support Team", service = "supportservice", id = groupId)
+    private val operator = Operator(name = "John Doe", id = operatorId, username = "johndoe", email = "johndoe@email.com")
+    private val group = Group(name = "Support Team", node = "supportteam", service = "supportservice", id = groupId)
 
     @BeforeEach
     fun setUp() {
@@ -54,7 +54,8 @@ class GroupServiceTest {
 
     @Test
     fun rejectsGroupWithTakenRoom() {
-        Mockito.`when`(groupRepository.findAll()).thenReturn(listOf(Group(name = "Support Team", service = "supportservice")))
+        Mockito.`when`(groupRepository.findAll()).thenReturn(listOf(
+            Group(name = "Support Team", node = "supportteam", service = "supportservice")))
 
         assertFailsWith<ConflictException> { service.create("support team", "supportservice") }
 

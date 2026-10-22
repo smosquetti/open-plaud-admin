@@ -78,7 +78,7 @@ class AdminApiIntegrationTest @Autowired constructor(
         val serviceName = "conference"
 
         // 1. Register operator: XMPP user + operators row
-        val (operatorStatus, operatorBody) = send(HttpMethod.POST, "/api/v1/operators", """{"name":"$operatorName"}""")
+        val (operatorStatus, operatorBody) = send(HttpMethod.POST, "/api/v1/operators", """{"name":"$operatorName", "email":"test@email.com"}""")
         assertEquals(201, operatorStatus)
         operatorId = UUID.fromString(operatorBody.path("id").asText())
         xmppUser = operatorBody.path("xmppUser").asText()
