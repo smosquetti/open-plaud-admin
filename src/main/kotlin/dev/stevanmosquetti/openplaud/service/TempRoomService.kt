@@ -5,6 +5,7 @@ import dev.stevanmosquetti.openplaud.dto.CreateTempRoomResponse
 import dev.stevanmosquetti.openplaud.repository.OperatorGroupRepository
 import dev.stevanmosquetti.openplaud.repository.OperatorRepository
 import dev.stevanmosquetti.openplaud.slugify.Slugifier
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.util.Base64
@@ -19,6 +20,8 @@ class TempRoomService(
     @Value("\${ejabberd.username}") var username: String,
     @Value("\${ejabberd.password}") val password: String,
 ) {
+
+    private val log = LoggerFactory.getLogger(TempRoomService::class.java)
 
     private val authorization: String
         get() = "Basic ${Base64.getEncoder().encodeToString("$username:$password".toByteArray())}"
@@ -44,13 +47,14 @@ class TempRoomService(
                     authorization)
             }
 
+        log.info("Created temporary MUC room '$room' for user '$user' in service '${service?: mucService}'")
         return CreateTempRoomResponse(room, service?: mucService)
     }
 
     fun removeAllOtherOperators(operatorId: UUID, groupId: UUID, room: String, service: String?) {
         val operators: List<UUID> = operatorGroupRepository.listOperatorsByGroupId(groupId)
-        operators
-            .filter { uuid -> uuid != operatorId }
+        val otherOperators = operators.filter { uuid -> uuid != operatorId }
+        otherOperators
             .forEach { uuid ->
                 ejabberd.setRoomAffiliation(
                     room,
@@ -58,10 +62,12 @@ class TempRoomService(
                     operatorRepository.getUsernameById(uuid),
                     "outcast")
             }
+        log.info("Operator $operatorId joined room '$room'; outcast ${otherOperators.size} other operator(s) of group $groupId")
     }
 
     fun removeRoom(room: String, service: String?) {
         ejabberd.destroyRoom(room, service?: mucService, authorization)
+        log.info("Destroyed temporary MUC room '$room' in service '${service?: mucService}'")
     }
 
     private fun slugify(user: String): String = try {

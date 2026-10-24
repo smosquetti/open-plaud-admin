@@ -1,6 +1,7 @@
 package dev.stevanmosquetti.openplaud.client
 
 import jakarta.servlet.http.HttpServletRequest
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
@@ -22,6 +23,8 @@ class EjabberdClient(
     @Value("\${ejabberd.host}") val host: String,
 ) {
 
+    private val log = LoggerFactory.getLogger(EjabberdClient::class.java)
+
     private val restClient: RestClient = RestClient.builder()
         .baseUrl(baseUrl)
         .build()
@@ -33,6 +36,7 @@ class EjabberdClient(
     }
 
     fun registerUser(user: String, userPassword: String, authorization: String? = "") {
+        log.debug("Registering XMPP user '{}'", user)
         postForStatus(
             "register",
             mapOf("user" to user, "host" to host, "password" to userPassword),
@@ -45,6 +49,7 @@ class EjabberdClient(
      * a registration whose database row could not be persisted.
      */
     fun unregisterUser(user: String, authorization: String? = "") {
+        log.debug("Unregistering XMPP user '{}'", user)
         postForStatus(
             "unregister",
             mapOf("user" to user, "host" to host),
@@ -53,6 +58,7 @@ class EjabberdClient(
     }
 
     fun createRoom(room: String, service: String, authorization: String? = "") {
+        log.debug("Creating MUC room '{}' on service '{}'", room, service)
         postForStatus(
             "create_room_with_opts",
             mapOf(
@@ -66,6 +72,7 @@ class EjabberdClient(
     }
 
     fun createPersistentRoom(room: String, service: String, authorization: String? = "") {
+        log.debug("Creating persistent MUC room '{}' on service '{}'", room, service)
         postForStatus(
             "create_room_with_opts",
             mapOf(
@@ -86,6 +93,7 @@ class EjabberdClient(
      * mapOf("room" to room, "service" to mucService, "host" to host),
      */
     fun destroyRoom(room: String, service: String, authorization: String? = "") {
+        log.debug("Destroying MUC room '{}' on service '{}'", room, service)
         postForStatus(
             "destroy_room",
             mapOf("room" to room, "service" to service),
@@ -94,6 +102,7 @@ class EjabberdClient(
     }
 
     fun setRoomAffiliation(room: String, service: String, user: String, affiliation: String = "member", authorization: String? = "") {
+        log.debug("Setting affiliation '{}' for user '{}' in room '{}' on service '{}'", affiliation, user, room, service)
         postForStatus(
             "set_room_affiliation",
             mapOf(
@@ -108,6 +117,7 @@ class EjabberdClient(
     }
 
     fun getRoomAffiliation(room: String, service: String, jid: String, authorization: String? = ""): String {
+        log.debug("Getting affiliation for jid '{}' in room '{}' on service '{}'", jid, room, service)
         return postForString(
             "get_room_affiliation",
             mapOf("room" to room, "service" to service, "jid" to jid),
@@ -123,7 +133,7 @@ class EjabberdClient(
             .body(objectToJsonString(body))
             .exchange { _, response ->
                 if (!response.statusCode.is2xxSuccessful()) {
-                    throw errorFromResponse(response)
+                    throw errorFromResponse(command, response)
                 }
             }
     }
@@ -136,7 +146,7 @@ class EjabberdClient(
             .body(objectToJsonString(body))
             .exchange { _, response ->
                 if (!response.statusCode.is2xxSuccessful()) {
-                    throw errorFromResponse(response)
+                    throw errorFromResponse(command, response)
                 }
                 response.bodyTo<String>(String::class.java) ?: ""
             }
@@ -147,13 +157,17 @@ class EjabberdClient(
         return mapper.writeValueAsString(map)
     }
 
-    private fun errorFromResponse(response: ConvertibleClientHttpResponse): EjabberdException {
+    private fun errorFromResponse(command: String, response: ConvertibleClientHttpResponse): EjabberdException {
         val errorBody: Map<*, *>? = try {
             response.bodyTo(Map::class.java)
         } catch (e: Exception) {
             null
         }
         val message = (errorBody?.get("message") as? String) ?: "Unknown ejabberd error"
+        log.warn(
+            "ejabberd mod_http_api command '{}' failed: HTTP {} ({}): {}",
+            command, response.statusCode, response.statusText, message,
+        )
         return EjabberdException(message, response.statusCode, response.statusText)
     }
 }

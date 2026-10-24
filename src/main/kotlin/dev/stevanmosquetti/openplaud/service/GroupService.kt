@@ -42,6 +42,7 @@ class GroupService(
             cleanupAfterDbFailure(room, service, dbError)
             throw dbError
         }
+        log.info("Created group '$name' with MUC room '$room' on service '$service'")
         return GroupResponse(id = group.id, name = group.name, room = room, service = service)
     }
 
@@ -66,6 +67,7 @@ class GroupService(
             }
             throw dbError
         }
+        log.info("Added operator $operatorId to group $groupId")
     }
 
     fun removeOperatorFromGroup(groupId: UUID, operatorId: UUID) {
@@ -78,6 +80,7 @@ class GroupService(
         val user = slugify(operator.name)
         ejabberd.setRoomAffiliation(room, group.service, user, "none")
         operatorGroupRepository.deleteById(key)
+        log.info("Removed operator $operatorId from group $groupId")
     }
 
     fun removeRoom(groupId: UUID) {
@@ -85,6 +88,7 @@ class GroupService(
         operatorGroupRepository.deleteByGroup(group.id)
         groupRepository.deleteById(group.id)
         ejabberd.destroyRoom(group.node, group.service)
+        log.info("Removed group $groupId and destroyed MUC room '${group.node}' on service '${group.service}'")
     }
 
     private fun requireGroup(groupId: UUID): Group =

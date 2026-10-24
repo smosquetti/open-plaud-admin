@@ -37,6 +37,7 @@ class OperatorService(
             cleanupAfterDbFailure(xmppUser, dbError)
             throw dbError
         }
+        log.info("Registered operator '$name' as XMPP user '$xmppUser'")
         return OperatorResponse(
             id = operator.id,
             name = operator.name,
@@ -67,6 +68,7 @@ class OperatorService(
         operatorGroupRepository.deleteByOperator(operator.id)
         operatorRepository.deleteById(operator.id)
         ejabberd.unregisterUser(operator.username)
+        log.info("Removed operator $operatorId and unregistered XMPP user '${operator.username}'")
     }
 
     private fun requireOperator(operatorId: UUID): Operator =
