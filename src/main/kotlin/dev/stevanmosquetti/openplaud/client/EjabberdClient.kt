@@ -24,9 +24,13 @@ class EjabberdClient(
     @Value("\${ejabberd.base-url}") baseUrl: String,
     @Value("\${ejabberd.host}") val host: String,
     @Value("\${ejabberd.username}") val adminUsername: String,
+    @Value("\${ejabberd.password}") val adminPassword: String,
 ) {
 
     private val log = LoggerFactory.getLogger(EjabberdClient::class.java)
+    
+    private val authorization: String
+        get() = "Basic ${java.util.Base64.getEncoder().encodeToString("$adminUsername:$adminPassword".toByteArray())}"
 
     private val restClient: RestClient = RestClient.builder()
         .baseUrl(baseUrl)
@@ -38,12 +42,11 @@ class EjabberdClient(
         return request?.getHeader(HttpHeaders.AUTHORIZATION)
     }
 
-    fun registerUser(user: String, userPassword: String, authorization: String? = "") {
+    fun registerUser(user: String, userPassword: String) {
         log.debug("Registering XMPP user '{}'", user)
         postForStatus(
             "register",
-            mapOf("user" to user, "host" to host, "password" to userPassword),
-            getAuthorizationHeader()?: authorization,
+            mapOf("user" to user, "host" to host, "password" to userPassword)
         )
     }
 
@@ -51,16 +54,15 @@ class EjabberdClient(
      * Unregisters a user from the server (mod_http_api `unregister`). Used to compensate
      * a registration whose database row could not be persisted.
      */
-    fun unregisterUser(user: String, authorization: String? = "") {
+    fun unregisterUser(user: String) {
         log.debug("Unregistering XMPP user '{}'", user)
         postForStatus(
             "unregister",
-            mapOf("user" to user, "host" to host),
-            getAuthorizationHeader()?: authorization,
+            mapOf("user" to user, "host" to host)
         )
     }
 
-    fun createRoom(room: String, service: String, authorization: String? = "") {
+    fun createRoom(room: String, service: String) {
         log.debug("Creating MUC room '{}' on service '{}'", room, service)
         postForStatus(
             "create_room_with_opts",
@@ -69,12 +71,11 @@ class EjabberdClient(
                 "service" to service,
                 "host" to host,
                 "options" to listOf(mapOf("name" to "members_only", "value" to "true")),
-            ),
-            getAuthorizationHeader()?: authorization,
+            )
         )
     }
 
-    fun createPersistentRoom(room: String, service: String, authorization: String? = "") {
+    fun createPersistentRoom(room: String, service: String) {
         log.debug("Creating persistent MUC room '{}' on service '{}'", room, service)
         postForStatus(
             "create_room_with_opts",
@@ -85,8 +86,7 @@ class EjabberdClient(
                 "options" to listOf(
                     mapOf("name" to "persistent", "value" to "true"),
                     mapOf("name" to "members_only", "value" to "true")),
-            ),
-            getAuthorizationHeader()?: authorization,
+            )
         )
     }
 
@@ -95,16 +95,15 @@ class EjabberdClient(
      * creation whose database row could not be persisted.
      * mapOf("room" to room, "service" to mucService, "host" to host),
      */
-    fun destroyRoom(room: String, service: String, authorization: String? = "") {
+    fun destroyRoom(room: String, service: String) {
         log.debug("Destroying MUC room '{}' on service '{}'", room, service)
         postForStatus(
             "destroy_room",
-            mapOf("room" to room, "service" to service),
-            getAuthorizationHeader()?: authorization,
+            mapOf("room" to room, "service" to service)
         )
     }
 
-    fun setRoomAffiliation(room: String, service: String, user: String, affiliation: String = "member", authorization: String? = "") {
+    fun setRoomAffiliation(room: String, service: String, user: String, affiliation: String = "member") {
         log.debug("Setting affiliation '{}' for user '{}' in room '{}' on service '{}'", affiliation, user, room, service)
         postForStatus(
             "set_room_affiliation",
@@ -114,21 +113,19 @@ class EjabberdClient(
                 "user" to user,
                 "host" to host,
                 "affiliation" to affiliation,
-            ),
-            getAuthorizationHeader()?: authorization,
+            )
         )
     }
 
-    fun getRoomAffiliation(room: String, service: String, jid: String, authorization: String? = ""): String {
+    fun getRoomAffiliation(room: String, service: String, jid: String): String {
         log.debug("Getting affiliation for jid '{}' in room '{}' on service '{}'", jid, room, service)
         return postForString(
             "get_room_affiliation",
-            mapOf("room" to room, "service" to service, "jid" to jid),
-            getAuthorizationHeader()?: authorization
+            mapOf("room" to room, "service" to service, "jid" to jid)
         ).replace("\"", "")
     }
     
-    fun checkPassword(): String {
+    fun checkOperatorAccess(): String {
         val credentials = extractCredentialsFromHeader()
         return postForString(
             "check_password",
@@ -136,14 +133,13 @@ class EjabberdClient(
                 "user" to credentials["user"], 
                 "host" to host, 
                 "password" to credentials["password"]
-            ),
-            getAuthorizationHeader()?: ""
+            )
         ).replace("\"", "")
     }
     
     fun checkAdminAccess(): String {
         val credentials = extractCredentialsFromHeader()
-        if ("$credentials['user']@$host" != adminUsername) {
+        if (credentials["user"] != adminUsername) {
             throw EjabberdException("Authentication failure", HttpStatusCode.valueOf(401), "Unauthorized")
         }
         return postForString(
@@ -152,8 +148,7 @@ class EjabberdClient(
                 "user" to credentials["user"], 
                 "host" to host, 
                 "password" to credentials["password"]
-            ),
-            getAuthorizationHeader()?: ""
+            )
         ).replace("\"", "")
     }
     
@@ -163,18 +158,18 @@ class EjabberdClient(
             HttpStatusCode.valueOf(401),
             "Unauthorized"
         )
-        val decodedBytes: ByteArray = Base64.decode(auth)
+        val decodedBytes: ByteArray = Base64.decode(auth.split(" ")[1])
         val decodedString = decodedBytes.decodeToString()
         val user = decodedString.split(":")[0]
         val password = decodedString.split(":")[1]
         return mapOf("user" to user, "password" to password)
     }
 
-    private fun postForStatus(command: String, body: Any, authorization: String?) {
+    private fun postForStatus(command: String, body: Any) {
         restClient.post()
             .uri("/$command")
             .contentType(MediaType.APPLICATION_JSON)
-            .header(HttpHeaders.AUTHORIZATION, authorization?: "")
+            .header(HttpHeaders.AUTHORIZATION, getAuthorizationHeader()?: authorization)
             .body(objectToJsonString(body))
             .exchange { _, response ->
                 if (!response.statusCode.is2xxSuccessful()) {
@@ -183,11 +178,11 @@ class EjabberdClient(
             }
     }
 
-    private fun postForString(command: String, body: Any, authorization: String?): String {
+    private fun postForString(command: String, body: Any): String {
         return restClient.post()
             .uri("/$command")
             .contentType(MediaType.APPLICATION_JSON)
-            .header(HttpHeaders.AUTHORIZATION, authorization?: "")
+            .header(HttpHeaders.AUTHORIZATION, getAuthorizationHeader()?: authorization)
             .body(objectToJsonString(body))
             .exchange { _, response ->
                 if (!response.statusCode.is2xxSuccessful()) {

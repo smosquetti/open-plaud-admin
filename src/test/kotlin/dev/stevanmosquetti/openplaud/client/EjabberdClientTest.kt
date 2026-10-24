@@ -59,6 +59,7 @@ class EjabberdClientTest {
             "http://${address.hostName}:${address.port}/api",
             "localhost",
             "admin@localhost",
+            "password"
         )
 
     }
@@ -185,12 +186,4 @@ class EjabberdClientTest {
         assertEquals("johndoe@localhost", json.get("jid")?.asText())
     }
 
-    @Test
-    fun fallsBackToExplicitAuthorizationWithoutRequestContext() {
-        RequestContextHolder.resetRequestAttributes()
-
-        client.registerUser("johndoe", "secret", "Basic explicit")
-
-        assertEquals("Basic explicit", lastRequest().authorization)
-    }
 }

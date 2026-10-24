@@ -30,6 +30,15 @@ class GroupService(
 ) {
 
     private val log = LoggerFactory.getLogger(GroupService::class.java)
+    
+    fun getListOfGroups(): List<GroupResponse> {
+        return groupRepository.findAll()
+            .filterIsInstance<Group>()
+            .map {
+                g -> GroupResponse(g.id, g.name, g.node, g.service)
+            }
+            .toList()  
+    }
 
     fun create(name: String, service: String): GroupResponse {
         val room = slugify(name)

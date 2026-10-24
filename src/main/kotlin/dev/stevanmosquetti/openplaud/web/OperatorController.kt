@@ -21,6 +21,11 @@ class OperatorController(
     private val operatorService: OperatorService,
 ) {
 
+    @GetMapping("/operators")
+    fun getListOfOperators(): ResponseEntity<List<OperatorResponse>> {
+        return ResponseEntity.status(HttpStatus.OK).body(operatorService.getListOfOperators())
+    }
+
     /**
      * Registers an operator: creates the XMPP user on ejabberd and inserts a row into
      * the `operators` table. The XMPP login password is returned in the response.

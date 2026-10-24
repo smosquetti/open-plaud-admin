@@ -8,7 +8,6 @@ import dev.stevanmosquetti.openplaud.slugify.Slugifier
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
-import java.util.Base64
 import java.util.UUID
 
 @Service
@@ -17,24 +16,18 @@ class TempRoomService(
     private val operatorRepository: OperatorRepository,
     private val ejabberd: EjabberdClient,
     @Value("\${ejabberd.muc-service}") var mucService: String,
-    @Value("\${ejabberd.username}") var username: String,
-    @Value("\${ejabberd.password}") val password: String,
 ) {
 
     private val log = LoggerFactory.getLogger(TempRoomService::class.java)
 
-    private val authorization: String
-        get() = "Basic ${Base64.getEncoder().encodeToString("$username:$password".toByteArray())}"
-
     fun create(user: String, groupId: UUID, service: String?): CreateTempRoomResponse {
         val room = slugify(user)
-        ejabberd.createRoom(room, service?: mucService, authorization)
+        ejabberd.createRoom(room, service?: mucService)
         ejabberd.setRoomAffiliation(
             room,
             service?: mucService,
             user,
-            "member",
-            authorization)
+            "member")
 
         val operators: List<UUID> = operatorGroupRepository.listOperatorsByGroupId(groupId)
         operators
@@ -43,8 +36,7 @@ class TempRoomService(
                     room,
                     service?: mucService,
                     operatorRepository.getUsernameById(uuid),
-                    "admin",
-                    authorization)
+                    "admin")
             }
 
         log.info("Created temporary MUC room '$room' for user '$user' in service '${service?: mucService}'")
@@ -66,7 +58,7 @@ class TempRoomService(
     }
 
     fun removeRoom(room: String, service: String?) {
-        ejabberd.destroyRoom(room, service?: mucService, authorization)
+        ejabberd.destroyRoom(room, service?: mucService)
         log.info("Destroyed temporary MUC room '$room' in service '${service?: mucService}'")
     }
 

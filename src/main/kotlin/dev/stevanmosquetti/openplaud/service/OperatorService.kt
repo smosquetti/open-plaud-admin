@@ -26,6 +26,16 @@ class OperatorService(
 
     private val log = LoggerFactory.getLogger(OperatorService::class.java)
 
+    fun getListOfOperators(): List<OperatorResponse> {
+        ejabberd.checkAdminAccess()
+        return operatorRepository.findAll()
+            .filterIsInstance<Operator>()
+            .map {
+                o -> OperatorResponse(o.id, o.name, o.email, o.username)
+            }
+            .toList()
+    }
+
     fun register(name: String, email: String, password: String?): OperatorResponse {
         val xmppUser = slugify(name)
         requireXmppUserFree(xmppUser)
@@ -72,7 +82,7 @@ class OperatorService(
     }
     
     fun checkAccess() {
-        ejabberd.checkPassword()
+        ejabberd.checkOperatorAccess()
     }
 
     private fun requireOperator(operatorId: UUID): Operator =
