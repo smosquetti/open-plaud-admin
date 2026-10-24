@@ -58,6 +58,7 @@ class EjabberdClientTest {
         client = EjabberdClient(
             "http://${address.hostName}:${address.port}/api",
             "localhost",
+            "admin@localhost",
         )
 
     }

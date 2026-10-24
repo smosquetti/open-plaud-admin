@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpStatusCode
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
@@ -11,6 +12,7 @@ import org.springframework.web.client.RestClient.RequestHeadersSpec.ConvertibleC
 import org.springframework.web.context.request.RequestContextHolder
 import org.springframework.web.context.request.ServletRequestAttributes
 import tools.jackson.databind.ObjectMapper
+import kotlin.io.encoding.Base64
 
 /**
  * Thin client over ejabberd's mod_http_api (POST /api/<command>, Basic auth, flat JSON body).
@@ -21,6 +23,7 @@ import tools.jackson.databind.ObjectMapper
 class EjabberdClient(
     @Value("\${ejabberd.base-url}") baseUrl: String,
     @Value("\${ejabberd.host}") val host: String,
+    @Value("\${ejabberd.username}") val adminUsername: String,
 ) {
 
     private val log = LoggerFactory.getLogger(EjabberdClient::class.java)
@@ -123,6 +126,48 @@ class EjabberdClient(
             mapOf("room" to room, "service" to service, "jid" to jid),
             getAuthorizationHeader()?: authorization
         ).replace("\"", "")
+    }
+    
+    fun checkPassword(): String {
+        val credentials = extractCredentialsFromHeader()
+        return postForString(
+            "check_password",
+            mapOf(
+                "user" to credentials["user"], 
+                "host" to host, 
+                "password" to credentials["password"]
+            ),
+            getAuthorizationHeader()?: ""
+        ).replace("\"", "")
+    }
+    
+    fun checkAdminAccess(): String {
+        val credentials = extractCredentialsFromHeader()
+        if ("$credentials['user']@$host" != adminUsername) {
+            throw EjabberdException("Authentication failure", HttpStatusCode.valueOf(401), "Unauthorized")
+        }
+        return postForString(
+            "check_password",
+            mapOf(
+                "user" to credentials["user"], 
+                "host" to host, 
+                "password" to credentials["password"]
+            ),
+            getAuthorizationHeader()?: ""
+        ).replace("\"", "")
+    }
+    
+    private fun extractCredentialsFromHeader(): Map<String, String> {
+        val auth = getAuthorizationHeader() ?: throw EjabberdException(
+            "Authentication failure",
+            HttpStatusCode.valueOf(401),
+            "Unauthorized"
+        )
+        val decodedBytes: ByteArray = Base64.decode(auth)
+        val decodedString = decodedBytes.decodeToString()
+        val user = decodedString.split(":")[0]
+        val password = decodedString.split(":")[1]
+        return mapOf("user" to user, "password" to password)
     }
 
     private fun postForStatus(command: String, body: Any, authorization: String?) {

@@ -70,6 +70,10 @@ class OperatorService(
         ejabberd.unregisterUser(operator.username)
         log.info("Removed operator $operatorId and unregistered XMPP user '${operator.username}'")
     }
+    
+    fun checkAccess() {
+        ejabberd.checkPassword()
+    }
 
     private fun requireOperator(operatorId: UUID): Operator =
         operatorRepository.findById(operatorId)
