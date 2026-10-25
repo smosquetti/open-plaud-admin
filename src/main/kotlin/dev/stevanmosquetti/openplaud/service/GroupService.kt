@@ -11,6 +11,8 @@ import dev.stevanmosquetti.openplaud.repository.OperatorGroupRepository
 import dev.stevanmosquetti.openplaud.repository.OperatorRepository
 import dev.stevanmosquetti.openplaud.slugify.Slugifier
 import org.slf4j.LoggerFactory
+import org.springframework.cache.annotation.CacheEvict
+import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 import java.util.UUID
 
@@ -30,16 +32,25 @@ class GroupService(
 ) {
 
     private val log = LoggerFactory.getLogger(GroupService::class.java)
-    
+
+    private companion object {
+        const val GROUPS_CACHE = "groups"
+    }
+
+    /**
+     * Served from the `groups` Redis cache; evicted by [create] and [removeRoom].
+     */
+    @Cacheable(GROUPS_CACHE)
     fun getListOfGroups(): List<GroupResponse> {
         return groupRepository.findAll()
             .filterIsInstance<Group>()
             .map {
                 g -> GroupResponse(g.id, g.name, g.node, g.service)
             }
-            .toList()  
+            .toList()
     }
 
+    @CacheEvict(GROUPS_CACHE, allEntries = true)
     fun create(name: String, service: String): GroupResponse {
         val room = slugify(name)
         requireRoomFree(room)
@@ -92,6 +103,7 @@ class GroupService(
         log.info("Removed operator $operatorId from group $groupId")
     }
 
+    @CacheEvict(GROUPS_CACHE, allEntries = true)
     fun removeRoom(groupId: UUID) {
         val group = requireGroup(groupId)
         operatorGroupRepository.deleteByGroup(group.id)
