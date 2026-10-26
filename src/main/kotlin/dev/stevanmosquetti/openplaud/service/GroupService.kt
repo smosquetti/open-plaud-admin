@@ -50,6 +50,10 @@ class GroupService(
             .toList()
     }
 
+    /**
+     * Creates a group: creates the persistent MUC room and inserts the `groups` row.
+     * Evicts the groups cache.
+     */
     @CacheEvict(GROUPS_CACHE, allEntries = true)
     fun create(name: String, service: String): GroupResponse {
         val room = slugify(name)
@@ -66,6 +70,10 @@ class GroupService(
         return GroupResponse(id = group.id, name = group.name, room = room, service = service)
     }
 
+    /**
+     * Adds an operator to a group: sets the MUC affiliation to `member` and inserts
+     * the membership row.
+     */
     fun addOperatorToGroup(groupId: UUID, operatorId: UUID) {
         val group = requireGroup(groupId)
         val operator = requireOperator(operatorId)
@@ -90,6 +98,10 @@ class GroupService(
         log.info("Added operator $operatorId to group $groupId")
     }
 
+    /**
+     * Removes an operator from a group: sets the MUC affiliation to `none` and
+     * deletes the membership row.
+     */
     fun removeOperatorFromGroup(groupId: UUID, operatorId: UUID) {
         val key = OperatorGroupId(operatorId, groupId)
         operatorGroupRepository.findById(key)
@@ -103,6 +115,10 @@ class GroupService(
         log.info("Removed operator $operatorId from group $groupId")
     }
 
+    /**
+     * Removes a group: deletes membership rows and the `groups` row, and destroys
+     * the MUC room. Evicts the groups cache.
+     */
     @CacheEvict(GROUPS_CACHE, allEntries = true)
     fun removeRoom(groupId: UUID) {
         val group = requireGroup(groupId)
@@ -112,14 +128,23 @@ class GroupService(
         log.info("Removed group $groupId and destroyed MUC room '${group.node}' on service '${group.service}'")
     }
 
+    /**
+     * Returns the group or throws NotFoundException.
+     */
     private fun requireGroup(groupId: UUID): Group =
         groupRepository.findById(groupId)
             .orElseThrow { NotFoundException("Group $groupId not found") }
 
+    /**
+     * Returns the operator or throws NotFoundException.
+     */
     private fun requireOperator(operatorId: UUID): Operator =
         operatorRepository.findById(operatorId)
             .orElseThrow { NotFoundException("Operator $operatorId not found") }
 
+    /**
+     * Throws ConflictException when another group already uses the MUC room.
+     */
     private fun requireRoomFree(room: String) {
         val taken = groupRepository.findAll().any { Slugifier.slugify(it.name) == room }
         if (taken) {
@@ -127,6 +152,9 @@ class GroupService(
         }
     }
 
+    /**
+     * Destroys the freshly created room to compensate a failed database write.
+     */
     private fun cleanupAfterDbFailure(room: String, service: String, cause: RuntimeException) {
         log.error("Could not persist group for room '$room'; destroying the room", cause)
         try {
@@ -136,6 +164,10 @@ class GroupService(
         }
     }
 
+    /**
+     * Slugifies the group name; an invalid localpart becomes
+     * InvalidSlugException.
+     */
     private fun slugify(name: String): String = try {
         Slugifier.slugify(name)
     } catch (e: IllegalArgumentException) {

@@ -8,6 +8,10 @@ package dev.stevanmosquetti.openplaud.slugify
  */
 object Slugifier {
 
+    /**
+     * Returns the alphanumeric slug of the display name; requires a 2-30 character
+     * result.
+     */
     fun slugify(name: String): String {
         val slug = name.lowercase().filter { it.isLetterOrDigit() }
         require(slug.length in 2..30) {

@@ -21,6 +21,10 @@ class OperatorController(
     private val operatorService: OperatorService,
 ) {
 
+    /**
+     * Lists all operators from the database. The service verifies the caller is the
+     * configured admin account before reading.
+     */
     @GetMapping("/operators")
     fun getListOfOperators(): ResponseEntity<List<OperatorResponse>> {
         return ResponseEntity.status(HttpStatus.OK).body(operatorService.getListOfOperators())
@@ -34,12 +38,19 @@ class OperatorController(
     fun createOperator(@Valid @RequestBody request: CreateOperatorRequest): ResponseEntity<OperatorResponse> =
         ResponseEntity.status(HttpStatus.CREATED).body(operatorService.register(request.name, request.email, request.password))
 
+    /**
+     * Removes an operator: deletes its membership rows and `operators` row, and
+     * unregisters the XMPP user.
+     */
     @DeleteMapping("/operators/{operatorId}")
     fun deleteOperator(@PathVariable operatorId: UUID): ResponseEntity<Unit> {
         operatorService.removeOperator(operatorId)
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build()
     }
     
+    /**
+     * Verifies the caller's operator credentials against ejabberd `check_password`.
+     */
     @GetMapping("/operator/login")
     fun checkPassword(): ResponseEntity<Unit> {
         operatorService.checkAccess()

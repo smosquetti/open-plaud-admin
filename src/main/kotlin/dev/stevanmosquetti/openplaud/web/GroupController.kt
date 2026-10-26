@@ -21,6 +21,9 @@ class GroupController(
     private val groupService: GroupService,
 ) {
     
+    /**
+     * Lists all groups. Served from the Redis cache; evicted on group create/delete.
+     */
     @GetMapping("/groups")
     fun getListOfGroups(): ResponseEntity<List<GroupResponse>> {
         return ResponseEntity.status(HttpStatus.OK).body(groupService.getListOfGroups())
@@ -61,8 +64,8 @@ class GroupController(
     }
 
     /**
-     * Removes a group: remove the MUC on ejabberd
-     * and deletes the `groups` row.
+     * Removes a group: deletes membership rows, the `groups` row, and destroys the
+     * MUC room on ejabberd.
      */
     @DeleteMapping("/groups/{groupId}")
     fun removeRoom(@PathVariable groupId: UUID): ResponseEntity<Unit> {

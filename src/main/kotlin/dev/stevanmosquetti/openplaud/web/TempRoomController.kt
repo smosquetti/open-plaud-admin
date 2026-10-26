@@ -18,11 +18,19 @@ class TempRoomController(
     private val tempRoomService: TempRoomService,
 ) {
 
+    /**
+     * Creates a temp MUC room for `user` (affiliation `member`) and makes every
+     * operator of the group an admin of the room.
+     */
     @PostMapping("/chatroom")
     fun createChatroom(@Valid @RequestBody request: CreateTempRoomRequest): ResponseEntity<CreateTempRoomResponse> {
         return ResponseEntity.status(HttpStatus.CREATED).body(tempRoomService.create(request.user, request.groupId, request.service))
     }
     
+    /**
+     * Joins a temp room: all *other* operators of the group are set to `outcast` so
+     * only the joining operator keeps access.
+     */
     @PostMapping("/join")
     fun joinChatroom(@Valid @RequestBody request: JoinChatroomRequest): ResponseEntity<Unit> {
         tempRoomService.removeAllOtherOperators(request.operatorId, request.groupId, request.room, request.service)

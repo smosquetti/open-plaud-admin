@@ -12,7 +12,8 @@ import java.security.SecureRandom
 import java.util.UUID
 
 /**
- * Registers operators: a new XMPP user on ejabberd and a row in the `operators` table.
+ * Manages operators: registers them (a new XMPP user on ejabberd + a row in the
+ * `operators` table), lists them from the database, and checks operator access.
  *
  * The ejabberd call happens before the database write. If the database write fails, the
  * freshly registered XMPP user is unregistered again so the database stays authoritative.
@@ -26,6 +27,10 @@ class OperatorService(
 
     private val log = LoggerFactory.getLogger(OperatorService::class.java)
 
+    /**
+     * Lists all operators from the database. Verifies the caller is the configured
+     * admin account first.
+     */
     fun getListOfOperators(): List<OperatorResponse> {
         ejabberd.checkAdminAccess()
         return operatorRepository.findAll()
@@ -36,6 +41,11 @@ class OperatorService(
             .toList()
     }
 
+    /**
+     * Registers an operator: creates the XMPP user and inserts the `operators` row.
+     * When no password is given, one is generated and returned (once) in the
+     * response.
+     */
     fun register(name: String, email: String, password: String?): OperatorResponse {
         val xmppUser = slugify(name)
         requireXmppUserFree(xmppUser)
@@ -57,6 +67,10 @@ class OperatorService(
         )
     }
 
+    /**
+     * Throws ConflictException when another operator already produces the same
+     * XMPP user.
+     */
     private fun requireXmppUserFree(xmppUser: String) {
         val taken = operatorRepository.findAll().any { Slugifier.slugify(it.name) == xmppUser }
         if (taken) {
@@ -73,6 +87,10 @@ class OperatorService(
         }
     }
     
+    /**
+     * Removes an operator: deletes its membership rows and `operators` row, and
+     * unregisters the XMPP user.
+     */
     fun removeOperator(operatorId: UUID) {
         val operator = requireOperator(operatorId)
         operatorGroupRepository.deleteByOperator(operator.id)
@@ -81,14 +99,25 @@ class OperatorService(
         log.info("Removed operator $operatorId and unregistered XMPP user '${operator.username}'")
     }
     
+    /**
+     * Verifies the operator's Basic auth credentials against ejabberd
+     * `check_password`.
+     */
     fun checkAccess() {
         ejabberd.checkOperatorAccess()
     }
 
+    /**
+     * Returns the operator or throws NotFoundException.
+     */
     private fun requireOperator(operatorId: UUID): Operator =
         operatorRepository.findById(operatorId)
             .orElseThrow { NotFoundException("Operator $operatorId not found") }
 
+    /**
+     * Slugifies the display name; an invalid localpart becomes
+     * InvalidSlugException.
+     */
     private fun slugify(name: String): String = try {
         Slugifier.slugify(name)
     } catch (e: IllegalArgumentException) {
@@ -100,6 +129,9 @@ class OperatorService(
         private const val PASSWORD_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
         private val secureRandom = SecureRandom()
 
+        /**
+         * Generates a 24-character random alphanumeric password.
+         */
         fun generatePassword(): String {
             val chars = CharArray(PASSWORD_LENGTH)
             for (i in chars.indices) {

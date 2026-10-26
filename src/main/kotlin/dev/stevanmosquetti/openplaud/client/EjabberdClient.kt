@@ -17,7 +17,9 @@ import kotlin.io.encoding.Base64
 /**
  * Thin client over ejabberd's mod_http_api (POST /api/<command>, Basic auth, flat JSON body).
  *
- * `set_room_affiliation` / `get_room_affiliation` fail with "Room doesn't exists".
+ * `set_room_affiliation` / `get_room_affiliation` fail with "Room doesn't exists"
+ * when the room does not exist on the server — e.g. a non-persistent room that has
+ * been destroyed while empty.
  */
 @Component
 class EjabberdClient(
@@ -36,12 +38,19 @@ class EjabberdClient(
         .baseUrl(baseUrl)
         .build()
 
+    /**
+     * Returns the caller's `Authorization` header value, or null when the request
+     * has no servlet attributes.
+     */
     fun getAuthorizationHeader(): String? {
         val requestAttributes = RequestContextHolder.getRequestAttributes() as? ServletRequestAttributes
         val request: HttpServletRequest? = requestAttributes?.request
         return request?.getHeader(HttpHeaders.AUTHORIZATION)
     }
 
+    /**
+     * Registers a new XMPP user (mod_http_api `register`).
+     */
     fun registerUser(user: String, userPassword: String) {
         log.debug("Registering XMPP user '{}'", user)
         postForStatus(
@@ -62,6 +71,10 @@ class EjabberdClient(
         )
     }
 
+    /**
+     * Creates a non-persistent, members-only MUC room (mod_http_api
+     * `create_room_with_opts`).
+     */
     fun createRoom(room: String, service: String) {
         log.debug("Creating MUC room '{}' on service '{}'", room, service)
         postForStatus(
@@ -75,6 +88,10 @@ class EjabberdClient(
         )
     }
 
+    /**
+     * Creates a persistent, members-only MUC room (mod_http_api
+     * `create_room_with_opts`).
+     */
     fun createPersistentRoom(room: String, service: String) {
         log.debug("Creating persistent MUC room '{}' on service '{}'", room, service)
         postForStatus(
@@ -91,9 +108,9 @@ class EjabberdClient(
     }
 
     /**
-     * Destroys a MUC room (mod_http_api `destroy_room`). Used to compensate a room
-     * creation whose database row could not be persisted.
-     * mapOf("room" to room, "service" to mucService, "host" to host),
+     * Destroys a MUC room (mod_http_api `destroy_room`). Used when removing a group
+     * or temp room, and to compensate a room creation whose database row could not
+     * be persisted.
      */
     fun destroyRoom(room: String, service: String) {
         log.debug("Destroying MUC room '{}' on service '{}'", room, service)
@@ -103,6 +120,10 @@ class EjabberdClient(
         )
     }
 
+    /**
+     * Sets the MUC affiliation of `user` in `room` (mod_http_api
+     * `set_room_affiliation`).
+     */
     fun setRoomAffiliation(room: String, service: String, user: String, affiliation: String = "member") {
         log.debug("Setting affiliation '{}' for user '{}' in room '{}' on service '{}'", affiliation, user, room, service)
         postForStatus(
@@ -117,6 +138,10 @@ class EjabberdClient(
         )
     }
 
+    /**
+     * Returns the MUC affiliation of `jid` in `room` (mod_http_api
+     * `get_room_affiliation`).
+     */
     fun getRoomAffiliation(room: String, service: String, jid: String): String {
         log.debug("Getting affiliation for jid '{}' in room '{}' on service '{}'", jid, room, service)
         return postForString(
@@ -125,6 +150,10 @@ class EjabberdClient(
         ).replace("\"", "")
     }
     
+    /**
+     * Verifies the caller's operator credentials via `check_password` and returns
+     * the raw ejabberd response.
+     */
     fun checkOperatorAccess(): String {
         val credentials = extractCredentialsFromHeader()
         return postForString(
@@ -137,6 +166,10 @@ class EjabberdClient(
         ).replace("\"", "")
     }
     
+    /**
+     * Verifies the caller is the configured admin account and its credentials pass
+     * `check_password`; throws a 401 EjabberdException otherwise.
+     */
     fun checkAdminAccess(): String {
         val credentials = extractCredentialsFromHeader()
         if (credentials["user"] != adminUsername) {
@@ -152,6 +185,10 @@ class EjabberdClient(
         ).replace("\"", "")
     }
     
+    /**
+     * Decodes the Basic `Authorization` header into a user/password pair; throws a
+     * 401 EjabberdException when the header is missing.
+     */
     private fun extractCredentialsFromHeader(): Map<String, String> {
         val auth = getAuthorizationHeader() ?: throw EjabberdException(
             "Authentication failure",
@@ -165,6 +202,10 @@ class EjabberdClient(
         return mapOf("user" to user, "password" to password)
     }
 
+    /**
+     * Posts a command to mod_http_api and throws EjabberdException on a non-2xx
+     * response.
+     */
     private fun postForStatus(command: String, body: Any) {
         restClient.post()
             .uri("/$command")
@@ -178,6 +219,9 @@ class EjabberdClient(
             }
     }
 
+    /**
+     * Posts a command to mod_http_api and returns the response body as a string.
+     */
     private fun postForString(command: String, body: Any): String {
         return restClient.post()
             .uri("/$command")
@@ -192,11 +236,17 @@ class EjabberdClient(
             }
     }
 
+    /**
+     * Serializes a command body to a JSON string.
+     */
     private fun objectToJsonString(map: Any): String {
         val mapper: ObjectMapper = ObjectMapper()
         return mapper.writeValueAsString(map)
     }
 
+    /**
+     * Builds an EjabberdException from a failed ejabberd response.
+     */
     private fun errorFromResponse(command: String, response: ConvertibleClientHttpResponse): EjabberdException {
         val errorBody: Map<*, *>? = try {
             response.bodyTo(Map::class.java)

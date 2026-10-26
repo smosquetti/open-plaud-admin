@@ -6,6 +6,9 @@ import jakarta.persistence.Id
 import jakarta.persistence.Table
 import java.util.UUID
 
+/**
+ * JPA entity for the `operators` table.
+ */
 @Entity
 @Table(name = "operators")
 class Operator(

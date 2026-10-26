@@ -10,6 +10,10 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.util.UUID
 
+/**
+ * Manages temp rooms: creates a per-conversation MUC room and controls which group
+ * operators keep access.
+ */
 @Service
 class TempRoomService(
     private val operatorGroupRepository: OperatorGroupRepository,
@@ -20,6 +24,10 @@ class TempRoomService(
 
     private val log = LoggerFactory.getLogger(TempRoomService::class.java)
 
+    /**
+     * Creates a temp MUC room for `user` (affiliation `member`) and makes every
+     * operator of the group an admin of the room so they can transfer the call.
+     */
     fun create(user: String, groupId: UUID, service: String?): CreateTempRoomResponse {
         val room = slugify(user)
         ejabberd.createRoom(room, service?: mucService)
@@ -43,6 +51,10 @@ class TempRoomService(
         return CreateTempRoomResponse(room, service?: mucService)
     }
 
+    /**
+     * Sets every operator of the group other than the joining one to `outcast`, so
+     * only the joining operator keeps access to the room.
+     */
     fun removeAllOtherOperators(operatorId: UUID, groupId: UUID, room: String, service: String?) {
         val operators: List<UUID> = operatorGroupRepository.listOperatorsByGroupId(groupId)
         val otherOperators = operators.filter { uuid -> uuid != operatorId }
@@ -57,11 +69,18 @@ class TempRoomService(
         log.info("Operator $operatorId joined room '$room'; outcast ${otherOperators.size} other operator(s) of group $groupId")
     }
 
+    /**
+     * Destroys the temp MUC room on ejabberd.
+     */
     fun removeRoom(room: String, service: String?) {
         ejabberd.destroyRoom(room, service?: mucService)
         log.info("Destroyed temporary MUC room '$room' in service '${service?: mucService}'")
     }
 
+    /**
+     * Slugifies the username; an invalid localpart becomes
+     * InvalidSlugException.
+     */
     private fun slugify(user: String): String = try {
         Slugifier.slugify(user)
     } catch (e: IllegalArgumentException) {

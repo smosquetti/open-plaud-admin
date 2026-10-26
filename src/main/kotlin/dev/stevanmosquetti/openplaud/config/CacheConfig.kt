@@ -26,6 +26,10 @@ import java.time.Duration
 @EnableCaching
 class CacheConfig(private val connectionFactory: RedisConnectionFactory) {
 
+    /**
+     * Builds the Redis-backed CacheManager: JSON-serialized values, 5-minute entry
+     * TTL, and the `openplaud:` key prefix.
+     */
     @Bean
     fun cacheManager(): RedisCacheManager {
         val defaultConfig = RedisCacheConfiguration.defaultCacheConfig()

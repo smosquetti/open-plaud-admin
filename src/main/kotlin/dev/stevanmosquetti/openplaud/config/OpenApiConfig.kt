@@ -9,6 +9,9 @@ import org.springframework.context.annotation.Configuration
 @Configuration
 class OpenApiConfig {
 
+    /**
+     * Builds the OpenAPI info block from the `springdoc.info.*` properties.
+     */
     @Bean
     fun customOpenAPI(
         @Value("\${springdoc.info.title}") apiTitle: String,
