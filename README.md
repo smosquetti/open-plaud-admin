@@ -93,9 +93,12 @@ All endpoints live under `/api/v1`.
 | --- | --- | --- |
 | `POST` | `/operators` | Register an operator: creates the XMPP user and an `operators` row |
 | `GET` | `/operators` | List all operators; requires admin Basic auth (see [Login checks](#login-checks)) |
+| `GET` | `/operators/{operatorId}/groups` | List the groups the operator belongs to; requires admin Basic auth |
 | `DELETE` | `/operators/{operatorId}` | Remove an operator (membership rows + XMPP user) |
 
 `GET /operators` → 200 `[ { "id": "…", "name": "John Doe", "email": "…", "xmppUser": "johndoe" }, … ]`
+
+`GET /operators/{operatorId}/groups` → 200 `[ { "id": "…", "name": "Support Team", "room": "supportteam", "service": "conference" }, … ]`
 
 `POST /operators` request:
 
@@ -120,12 +123,15 @@ localpart are rejected.
 | --- | --- | --- |
 | `POST` | `/groups` | Create a group: persistent MUC room + `groups` row |
 | `GET` | `/groups` | List all groups; served from the Redis cache (5 min TTL, evicted on create/delete) |
+| `GET` | `/groups/{groupId}/operators` | List the operators of the group; requires admin Basic auth |
 | `POST` | `/groups/{groupId}/operators/{operatorId}` | Add operator to group (MUC affiliation `member`) |
 | `DELETE` | `/groups/{groupId}/operators/{operatorId}` | Remove operator from group (affiliation `none`) |
 | `DELETE` | `/groups/{groupId}` | Remove group (destroys the MUC room, deletes membership rows) |
 
 `POST /groups` request: `{ "name": "Support Team", "service": "conference" }`
 → 201 `{ "id": "…", "name": "Support Team", "room": "supportteam", "service": "conference" }`
+
+`GET /groups/{groupId}/operators` → 200 `[ { "id": "…", "name": "John Doe", "email": "…", "xmppUser": "johndoe" }, … ]`
 
 ### Temp rooms
 
@@ -152,8 +158,9 @@ ejabberd admin account from the config is used.
 
 Both endpoints read the caller's `Authorization` header and return 200 on a
 successful `check_password`; a missing header, a wrong user, or a bad
-password returns `401 Unauthorized`. `GET /operators` is gated the same
-way — it only runs for the configured admin account.
+password returns `401 Unauthorized`. `GET /operators`,
+`GET /operators/{operatorId}/groups`, and `GET /groups/{groupId}/operators`
+are gated the same way — they only run for the configured admin account.
 
 ### Errors
 
