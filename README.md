@@ -15,9 +15,10 @@ database as the source of truth for **Operators** (XMPP users), **Groups**
 
 ## Tech stack
 
-- Kotlin + Spring Boot 4 (Spring Web, Data JPA, Validation)
+- Kotlin + Spring Boot 4 (Spring Web, Data JPA, Validation, Cache)
 - Java 17 toolchain, built with Gradle (Kotlin DSL)
 - PostgreSQL
+- Redis (cache for the groups list)
 - springdoc-openapi (Swagger UI)
 - ejabberd 26 (`mod_http_api`, XML-RPC is not used)
 
@@ -52,6 +53,7 @@ database as the source of truth for **Operators** (XMPP users), **Groups**
   account. `api_permissions` for the http access should be
   `who: admin` — loopback IP ACLs do not work when the app runs in a
   container (requests arrive from the Docker bridge).
+- **Redis** — cache for the groups list (default `localhost:6379`).
 
 ## Configuration
 
@@ -61,6 +63,7 @@ All configuration lives in `src/main/resources/application.properties`:
 | --- | --- | --- |
 | `spring.datasource.url` | `jdbc:postgresql://localhost:5432/openplaud` | PostgreSQL |
 | `spring.datasource.username` / `.password` | `admin` / `admin` | PostgreSQL |
+| `spring.data.redis.host` / `.port` | `localhost` / `6379` | Redis cache for the groups list |
 | `ejabberd.base-url` | `http://localhost:5280/api` | `mod_http_api` endpoint |
 | `ejabberd.host` | `localhost` | XMPP host part of JIDs |
 | `ejabberd.muc-service` | `conference` | Default MUC service |
@@ -89,7 +92,10 @@ All endpoints live under `/api/v1`.
 | Method | Path | Description |
 | --- | --- | --- |
 | `POST` | `/operators` | Register an operator: creates the XMPP user and an `operators` row |
+| `GET` | `/operators` | List all operators; requires admin Basic auth (see [Login checks](#login-checks)) |
 | `DELETE` | `/operators/{operatorId}` | Remove an operator (membership rows + XMPP user) |
+
+`GET /operators` → 200 `[ { "id": "…", "name": "John Doe", "email": "…", "xmppUser": "johndoe" }, … ]`
 
 `POST /operators` request:
 
@@ -113,6 +119,7 @@ localpart are rejected.
 | Method | Path | Description |
 | --- | --- | --- |
 | `POST` | `/groups` | Create a group: persistent MUC room + `groups` row |
+| `GET` | `/groups` | List all groups; served from the Redis cache (5 min TTL, evicted on create/delete) |
 | `POST` | `/groups/{groupId}/operators/{operatorId}` | Add operator to group (MUC affiliation `member`) |
 | `DELETE` | `/groups/{groupId}/operators/{operatorId}` | Remove operator from group (affiliation `none`) |
 | `DELETE` | `/groups/{groupId}` | Remove group (destroys the MUC room, deletes membership rows) |
@@ -135,6 +142,18 @@ localpart are rejected.
 `service` is optional in both requests and defaults to `ejabberd.muc-service`.
 Temp room endpoints do not require the caller to be authenticated; the
 ejabberd admin account from the config is used.
+
+### Login checks
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/operator/login` | Verify an operator's Basic auth credentials via ejabberd `check_password` |
+| `GET` | `/admin/login` | Verify admin credentials (user must be `ejabberd.username`) via `check_password` |
+
+Both endpoints read the caller's `Authorization` header and return 200 on a
+successful `check_password`; a missing header, a wrong user, or a bad
+password returns `401 Unauthorized`. `GET /operators` is gated the same
+way — it only runs for the configured admin account.
 
 ### Errors
 
@@ -165,7 +184,7 @@ src/main/kotlin/dev/stevanmosquetti/openplaud/
 ├── repository/                   # Spring Data repositories
 ├── dto/                          # Request/response DTOs
 ├── slugify/                      # Display name -> XMPP localpart
-└── config/                       # OpenAPI config
+└── config/                       # OpenAPI + Redis cache config
 ```
 
 Tests live in `src/test/kotlin` (unit + integration, H2 for tests).
