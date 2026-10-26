@@ -2,6 +2,7 @@ package dev.stevanmosquetti.openplaud.service
 
 import dev.stevanmosquetti.openplaud.client.EjabberdClient
 import dev.stevanmosquetti.openplaud.dto.CreateTempRoomResponse
+import dev.stevanmosquetti.openplaud.entity.Operator
 import dev.stevanmosquetti.openplaud.repository.OperatorGroupRepository
 import dev.stevanmosquetti.openplaud.repository.OperatorRepository
 import kotlin.test.assertFailsWith
@@ -25,15 +26,16 @@ class TempRoomServiceTest {
 
     private val groupId = UUID.randomUUID()
     private val operatorId = UUID.randomUUID()
-    private val otherOperatorA = UUID.randomUUID()
-    private val otherOperatorB = UUID.randomUUID()
+    private val operator = Operator(operatorId, "Operator", "operator", "operator@email.com")
+    private val otherOperatorA = Operator(UUID.randomUUID(), "otherOperatorA", "other_a", "othera@email.com")
+    private val otherOperatorB = Operator(UUID.randomUUID(), "otherOperatorB", "other_b", "otherb@email.com")
 
     @Test
     fun createOpensRoomAndAffiliatesUserAndGroupOperators() {
         Mockito.`when`(operatorGroupRepository.listOperatorsByGroupId(groupId))
             .thenReturn(listOf(otherOperatorA, otherOperatorB))
-        Mockito.`when`(operatorRepository.getUsernameById(otherOperatorA)).thenReturn("other_a")
-        Mockito.`when`(operatorRepository.getUsernameById(otherOperatorB)).thenReturn("other_b")
+        Mockito.`when`(operatorRepository.getUsernameById(otherOperatorA.id)).thenReturn("other_a")
+        Mockito.`when`(operatorRepository.getUsernameById(otherOperatorB.id)).thenReturn("other_b")
 
         val response = service.create("John Doe", groupId, "support")
 
@@ -67,9 +69,9 @@ class TempRoomServiceTest {
     @Test
     fun removeAllOtherOperatorsClearsAffiliationOnlyForOtherOperators() {
         Mockito.`when`(operatorGroupRepository.listOperatorsByGroupId(groupId))
-            .thenReturn(listOf(operatorId, otherOperatorA, otherOperatorB))
-        Mockito.`when`(operatorRepository.getUsernameById(otherOperatorA)).thenReturn("other_a")
-        Mockito.`when`(operatorRepository.getUsernameById(otherOperatorB)).thenReturn("other_b")
+            .thenReturn(listOf(operator, otherOperatorA, otherOperatorB))
+        Mockito.`when`(operatorRepository.getUsernameById(otherOperatorA.id)).thenReturn("other_a")
+        Mockito.`when`(operatorRepository.getUsernameById(otherOperatorB.id)).thenReturn("other_b")
 
         service.removeAllOtherOperators(operatorId, groupId, "johndoe", "support")
 
@@ -83,7 +85,7 @@ class TempRoomServiceTest {
     @Test
     fun removeAllOtherOperatorsFallsBackToDefaultMucServiceWhenServiceIsNull() {
         Mockito.`when`(operatorGroupRepository.listOperatorsByGroupId(groupId)).thenReturn(listOf(otherOperatorA))
-        Mockito.`when`(operatorRepository.getUsernameById(otherOperatorA)).thenReturn("other_a")
+        Mockito.`when`(operatorRepository.getUsernameById(otherOperatorA.id)).thenReturn("other_a")
 
         service.removeAllOtherOperators(operatorId, groupId, "johndoe", null)
 

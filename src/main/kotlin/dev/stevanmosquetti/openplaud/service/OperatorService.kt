@@ -1,7 +1,9 @@
 package dev.stevanmosquetti.openplaud.service
 
 import dev.stevanmosquetti.openplaud.client.EjabberdClient
+import dev.stevanmosquetti.openplaud.dto.GroupResponse
 import dev.stevanmosquetti.openplaud.dto.OperatorResponse
+import dev.stevanmosquetti.openplaud.entity.Group
 import dev.stevanmosquetti.openplaud.entity.Operator
 import dev.stevanmosquetti.openplaud.repository.OperatorGroupRepository
 import dev.stevanmosquetti.openplaud.repository.OperatorRepository
@@ -37,6 +39,15 @@ class OperatorService(
             .filterIsInstance<Operator>()
             .map {
                 o -> OperatorResponse(o.id, o.name, o.email, o.username)
+            }
+            .toList()
+    }
+
+    fun getListOfGroupsForTheOperator(operatorId: UUID): List<GroupResponse> {
+        ejabberd.checkAdminAccess()
+        return operatorGroupRepository.listGroupsByOperatorId(operatorId)
+            .map {
+                g -> GroupResponse(g.id, g.name, g.node, g.service)
             }
             .toList()
     }

@@ -1,5 +1,7 @@
 package dev.stevanmosquetti.openplaud.repository
 
+import dev.stevanmosquetti.openplaud.entity.Group
+import dev.stevanmosquetti.openplaud.entity.Operator
 import dev.stevanmosquetti.openplaud.entity.OperatorGroup
 import dev.stevanmosquetti.openplaud.entity.OperatorGroupId
 import org.springframework.data.jpa.repository.JpaRepository
@@ -22,13 +24,26 @@ interface OperatorGroupRepository : JpaRepository<OperatorGroup, OperatorGroupId
     fun existsByOperatorIdAndGroupId(operatorId: UUID, groupId: UUID): Boolean
 
     /**
-     * Returns the ids of all operators that belong to the group.
+     * Returns all operators that belong to the group.
      */
     @Query("""
-       SELECT o.id.operatorId
-       FROM OperatorGroup o WHERE o.id.groupId = :groupId
-    """)
-    fun listOperatorsByGroupId(groupId: UUID): List<UUID>
+       SELECT o.id, o.name, o.username, o.email
+       FROM operators o
+       JOIN operator_groups og ON og.operator_id = o.id
+       WHERE og.group_id = :groupId
+    """, nativeQuery = true)
+    fun listOperatorsByGroupId(groupId: UUID): List<Operator>
+
+    /**
+     * Returns all groups that an operator belongs to.
+     */
+    @Query("""
+       SELECT g.id, g.name, g.node, g.service
+       FROM groups g
+       JOIN operator_groups og ON og.group_id = g.id
+       WHERE og.operator_id = :operatorId
+    """, nativeQuery = true)
+    fun listGroupsByOperatorId(operatorId: UUID): List<Group>
 
     /**
      * Deletes all membership rows of the group.

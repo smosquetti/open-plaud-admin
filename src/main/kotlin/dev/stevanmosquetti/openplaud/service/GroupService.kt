@@ -2,6 +2,7 @@ package dev.stevanmosquetti.openplaud.service
 
 import dev.stevanmosquetti.openplaud.client.EjabberdClient
 import dev.stevanmosquetti.openplaud.dto.GroupResponse
+import dev.stevanmosquetti.openplaud.dto.OperatorResponse
 import dev.stevanmosquetti.openplaud.entity.Group
 import dev.stevanmosquetti.openplaud.entity.Operator
 import dev.stevanmosquetti.openplaud.entity.OperatorGroup
@@ -13,6 +14,7 @@ import dev.stevanmosquetti.openplaud.slugify.Slugifier
 import org.slf4j.LoggerFactory
 import org.springframework.cache.annotation.CacheEvict
 import org.springframework.cache.annotation.Cacheable
+import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Service
 import java.util.UUID
 
@@ -68,6 +70,15 @@ class GroupService(
         }
         log.info("Created group '$name' with MUC room '$room' on service '$service'")
         return GroupResponse(id = group.id, name = group.name, room = room, service = service)
+    }
+
+    fun getListOfOperatorsForTheGroup(groupId: UUID): List<OperatorResponse> {
+        ejabberd.checkAdminAccess()
+        return operatorGroupRepository.listOperatorsByGroupId(groupId)
+            .map {
+                o -> OperatorResponse(o.id, o.name, o.email, o.username)
+            }
+            .toList()
     }
 
     /**

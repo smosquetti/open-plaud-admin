@@ -2,6 +2,7 @@ package dev.stevanmosquetti.openplaud.service
 
 import dev.stevanmosquetti.openplaud.client.EjabberdClient
 import dev.stevanmosquetti.openplaud.dto.CreateTempRoomResponse
+import dev.stevanmosquetti.openplaud.entity.Operator
 import dev.stevanmosquetti.openplaud.repository.OperatorGroupRepository
 import dev.stevanmosquetti.openplaud.repository.OperatorRepository
 import dev.stevanmosquetti.openplaud.slugify.Slugifier
@@ -37,13 +38,13 @@ class TempRoomService(
             user,
             "member")
 
-        val operators: List<UUID> = operatorGroupRepository.listOperatorsByGroupId(groupId)
+        val operators: List<Operator> = operatorGroupRepository.listOperatorsByGroupId(groupId)
         operators
-            .forEach { uuid ->
+            .forEach { op ->
                 ejabberd.setRoomAffiliation(
                     room,
                     service?: mucService,
-                    operatorRepository.getUsernameById(uuid),
+                    operatorRepository.getUsernameById(op.id),
                     "admin")
             }
 
@@ -56,14 +57,14 @@ class TempRoomService(
      * only the joining operator keeps access to the room.
      */
     fun removeAllOtherOperators(operatorId: UUID, groupId: UUID, room: String, service: String?) {
-        val operators: List<UUID> = operatorGroupRepository.listOperatorsByGroupId(groupId)
-        val otherOperators = operators.filter { uuid -> uuid != operatorId }
+        val operators: List<Operator> = operatorGroupRepository.listOperatorsByGroupId(groupId)
+        val otherOperators = operators.filter { op -> op.id != operatorId }
         otherOperators
-            .forEach { uuid ->
+            .forEach { op ->
                 ejabberd.setRoomAffiliation(
                     room,
                     service?: mucService,
-                    operatorRepository.getUsernameById(uuid),
+                    operatorRepository.getUsernameById(op.id),
                     "outcast")
             }
         log.info("Operator $operatorId joined room '$room'; outcast ${otherOperators.size} other operator(s) of group $groupId")

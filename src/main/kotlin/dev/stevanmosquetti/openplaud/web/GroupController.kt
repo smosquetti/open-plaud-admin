@@ -2,6 +2,7 @@ package dev.stevanmosquetti.openplaud.web
 
 import dev.stevanmosquetti.openplaud.dto.CreateGroupRequest
 import dev.stevanmosquetti.openplaud.dto.GroupResponse
+import dev.stevanmosquetti.openplaud.dto.OperatorResponse
 import dev.stevanmosquetti.openplaud.service.GroupService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -27,6 +28,11 @@ class GroupController(
     @GetMapping("/groups")
     fun getListOfGroups(): ResponseEntity<List<GroupResponse>> {
         return ResponseEntity.status(HttpStatus.OK).body(groupService.getListOfGroups())
+    }
+
+    @GetMapping("/groups/{groupId}/operators")
+    fun getListOfOperatorsForTheGroup(@PathVariable groupId: UUID): ResponseEntity<List<OperatorResponse>> {
+        return ResponseEntity.status(HttpStatus.OK).body(groupService.getListOfOperatorsForTheGroup(groupId))
     }
 
     /**

@@ -1,6 +1,7 @@
 package dev.stevanmosquetti.openplaud.web
 
 import dev.stevanmosquetti.openplaud.dto.CreateOperatorRequest
+import dev.stevanmosquetti.openplaud.dto.GroupResponse
 import dev.stevanmosquetti.openplaud.dto.OperatorResponse
 import dev.stevanmosquetti.openplaud.service.OperatorService
 import jakarta.validation.Valid
@@ -28,6 +29,11 @@ class OperatorController(
     @GetMapping("/operators")
     fun getListOfOperators(): ResponseEntity<List<OperatorResponse>> {
         return ResponseEntity.status(HttpStatus.OK).body(operatorService.getListOfOperators())
+    }
+
+    @GetMapping("/operators/{operatorId}/groups")
+    fun getListOfGroupsForTheOperator(@PathVariable operatorId: UUID): ResponseEntity<List<GroupResponse>> {
+        return ResponseEntity.status(HttpStatus.OK).body(operatorService.getListOfGroupsForTheOperator(operatorId))
     }
 
     /**
