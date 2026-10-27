@@ -7,6 +7,7 @@ import dev.stevanmosquetti.openplaud.entity.OperatorGroupId
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
+import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
 
 /**
@@ -49,6 +50,7 @@ interface OperatorGroupRepository : JpaRepository<OperatorGroup, OperatorGroupId
      * Deletes all membership rows of the group.
      */
     @Modifying
+    @Transactional
     @Query("DELETE FROM OperatorGroup o WHERE o.id.groupId = :groupId")
     fun deleteByGroup(groupId: UUID)
 
@@ -56,6 +58,7 @@ interface OperatorGroupRepository : JpaRepository<OperatorGroup, OperatorGroupId
      * Deletes all membership rows of the operator.
      */
     @Modifying
+    @Transactional
     @Query("DELETE FROM OperatorGroup o WHERE o.id.operatorId = :operatorId")
     fun deleteByOperator(operatorId: UUID)
 }
