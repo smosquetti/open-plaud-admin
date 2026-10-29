@@ -34,7 +34,7 @@ class OperatorService(
      * admin account first.
      */
     fun getListOfOperators(): List<OperatorResponse> {
-        ejabberd.checkAdminAccess()
+        ejabberd.checkOperatorAccess()
         return operatorRepository.findAll()
             .filterIsInstance<Operator>()
             .map {
@@ -44,7 +44,7 @@ class OperatorService(
     }
 
     fun getListOfGroupsForTheOperator(operatorId: UUID): List<GroupResponse> {
-        ejabberd.checkAdminAccess()
+        ejabberd.checkOperatorAccess()
         return operatorGroupRepository.listGroupsByOperatorId(operatorId)
             .map {
                 g -> GroupResponse(g.id, g.name, g.node, g.service)

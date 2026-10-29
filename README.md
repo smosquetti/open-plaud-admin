@@ -93,8 +93,8 @@ All endpoints live under `/api/v1`.
 | Method | Path | Description |
 | --- | --- | --- |
 | `POST` | `/operators` | Register an operator: creates the XMPP user and an `operators` row |
-| `GET` | `/operators` | List all operators; requires admin Basic auth (see [Login checks](#login-checks)) |
-| `GET` | `/operators/{operatorId}/groups` | List the groups the operator belongs to; requires admin Basic auth |
+| `GET` | `/operators` | List all operators (see [Login checks](#login-checks)) |
+| `GET` | `/operators/{operatorId}/groups` | List the groups the operator belongs to |
 | `DELETE` | `/operators/{operatorId}` | Remove an operator (membership rows + XMPP user) |
 
 `GET /operators` → 200 `[ { "id": "…", "name": "John Doe", "email": "…", "xmppUser": "johndoe" }, … ]`
