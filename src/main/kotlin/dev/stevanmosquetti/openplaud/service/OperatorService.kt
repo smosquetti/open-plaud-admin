@@ -30,8 +30,7 @@ class OperatorService(
     private val log = LoggerFactory.getLogger(OperatorService::class.java)
 
     /**
-     * Lists all operators from the database. Verifies the caller is the configured
-     * admin account first.
+     * Lists all operators from the database
      */
     fun getListOfOperators(): List<OperatorResponse> {
         ejabberd.checkOperatorAccess()

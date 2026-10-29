@@ -21,7 +21,7 @@ class TempRoomService(
     private val operatorGroupRepository: OperatorGroupRepository,
     private val operatorRepository: OperatorRepository,
     private val ejabberd: EjabberdClient,
-    @Value("\${ejabberd.muc-service}") var mucService: String,,
+    @Value("\${ejabberd.muc-service}") var mucService: String,
     @Value("\${ejabberd.username}") val adminUsername: String,
     @Value("\${ejabberd.password}") val adminPassword: String,
 ) {

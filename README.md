@@ -11,8 +11,9 @@ database as the source of truth for **Operators** (XMPP users), **Groups**
   member.
 - **Temp room** — a per-conversation MUC room; operators of the given group
   are made admins and subscribed to the room's messages so they can
-  transfer the call, and only the joining operator keeps access
-  (everyone else is `outcast`).
+  transfer the call, only the joining operator keeps access
+  (everyone else is `outcast`), and a transfer hands the call over to
+  another operator of the group.
 
 ## Tech stack
 
@@ -138,15 +139,18 @@ localpart are rejected.
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `POST` | `/chatroom` | Create a temp MUC room for `user` (slug of the username and groupId, snake_case), affiliated `member`; every operator of `groupId` is set to `admin` and subscribed to the room's messages (`urn:xmpp:mucsub:nodes:messages`) |
-| `POST` | `/join` | Operator joins the room: all *other* operators of the group are set to `outcast` |
+| `POST` | `/chatroom` | Create a temp MUC room `<user>_<groupId>`: `user` is affiliated `member` and subscribed to the room's messages, and every operator of `groupId` is set to `admin` and subscribed (`urn:xmpp:mucsub:nodes:messages`) |
+| `POST` | `/chatroom/join` | Operator joins the room: all *other* operators of the group are set to `outcast` |
+| `POST` | `/chatroom/transfer` | Transfer the call to another operator of the group: the new operator is set to `admin` and subscribed to the room's messages, the previous operator is set to `outcast` |
 
 `POST /chatroom` request: `{ "user": "c04582c4-cf45-4191-a8ac-6d9b0b041c79", "name": "Jane Doe", "groupId": "c7fc5856-51f2-47d3-a0d2-ef26a6692200", "service": "conference" }`
 → 201 `{ "room": "c04582c4-cf45-4191-a8ac-6d9b0b041c79_c7fc5856-51f2-47d3-a0d2-ef26a6692200", "service": "conference" }`
 
-`POST /join` request: `{ "operatorId": "…", "groupId": "…", "room": "jane" }` → 200
+`POST /chatroom/join` request: `{ "operatorId": "…", "groupId": "…", "room": "c04582c4-cf45-…_c7fc5856-…" }` → 200
 
-`service` is optional in both requests and defaults to `ejabberd.muc-service`.
+`POST /chatroom/transfer` request: `{ "room": "c04582c4-cf45-…_c7fc5856-…", "operatorId": "…", "previousOperatorId": "…", "service": "conference" }` → 200
+
+`service` is optional in all three requests and defaults to `ejabberd.muc-service`.
 Temp room endpoints do not require the caller to be authenticated; the
 ejabberd admin account from the config is used.
 
@@ -159,9 +163,10 @@ ejabberd admin account from the config is used.
 
 Both endpoints read the caller's `Authorization` header and return 200 on a
 successful `check_password`; a missing header, a wrong user, or a bad
-password returns `401 Unauthorized`. `GET /operators`,
-`GET /operators/{operatorId}/groups`, and `GET /groups/{groupId}/operators`
-are gated the same way — they only run for the configured admin account.
+password returns `401 Unauthorized`. `GET /operators` and
+`GET /operators/{operatorId}/groups` are gated the same way, but any valid
+operator passes; `GET /groups/{groupId}/operators` requires the configured
+admin account.
 
 ### Errors
 

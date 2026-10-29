@@ -14,31 +14,35 @@ class TempRoomControllerTest {
 
     private val tempRoomService = Mockito.mock(TempRoomService::class.java)
     private val controller = TempRoomController(tempRoomService)
+    private val userId = UUID.randomUUID()
+    private val groupId = UUID.randomUUID()
+    private val operatorId = UUID.randomUUID()
+    private val room = "${userId.toString()}_${groupId}"
 
     @Test
     fun createOperatorReturnsCreatedWithServiceResult() {
         val groupId = UUID.randomUUID()
         val expected = CreateTempRoomResponse("johndoe", "conference")
-        Mockito.`when`(tempRoomService.create("john.doe", groupId, "conference")).thenReturn(expected)
+        Mockito.`when`(tempRoomService.create(userId, "john.doe", groupId, "conference")).thenReturn(expected)
 
-        val response = controller.createChatroom(CreateTempRoomRequest("john.doe", groupId, "conference"))
+        val response = controller.createChatroom(CreateTempRoomRequest(userId,"john.doe", groupId, "conference"))
 
         assertEquals(HttpStatus.CREATED, response.statusCode)
         assertEquals(expected, response.body)
-        Mockito.verify(tempRoomService).create("john.doe", groupId, "conference")
+        Mockito.verify(tempRoomService).create(userId, "john.doe", groupId, "conference")
     }
 
     @Test
     fun createOperatorForwardsNullServiceToTempRoomService() {
         val groupId = UUID.randomUUID()
-        val expected = CreateTempRoomResponse("johndoe", "conference")
-        Mockito.`when`(tempRoomService.create("john.doe", groupId, null)).thenReturn(expected)
+        val expected = CreateTempRoomResponse(room, "conference")
+        Mockito.`when`(tempRoomService.create(userId, "john.doe", groupId, null)).thenReturn(expected)
 
-        val response = controller.createChatroom(CreateTempRoomRequest("john.doe", groupId))
+        val response = controller.createChatroom(CreateTempRoomRequest(userId,"john.doe", groupId))
 
         assertEquals(HttpStatus.CREATED, response.statusCode)
         assertEquals(expected, response.body)
-        Mockito.verify(tempRoomService).create("john.doe", groupId, null)
+        Mockito.verify(tempRoomService).create(userId, "john.doe", groupId, null)
     }
 
     @Test

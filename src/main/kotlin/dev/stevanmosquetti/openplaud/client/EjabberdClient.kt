@@ -41,7 +41,8 @@ class EjabberdClient(
     fun getAuthorizationHeader(): String? {
         val requestAttributes = RequestContextHolder.getRequestAttributes() as? ServletRequestAttributes
         val request: HttpServletRequest? = requestAttributes?.request
-        return request?.getHeader(HttpHeaders.AUTHORIZATION)
+        val authorizationHeaderValue = request?.getHeader(HttpHeaders.AUTHORIZATION)
+        return authorizationHeaderValue
     }
 
     /**
@@ -59,11 +60,12 @@ class EjabberdClient(
      * Unregisters a user from the server (mod_http_api `unregister`). Used to compensate
      * a registration whose database row could not be persisted.
      */
-    fun unregisterUser(user: String) {
+    fun unregisterUser(user: String, authorization: String = "") {
         log.debug("Unregistering XMPP user '{}'", user)
         postForStatus(
             "unregister",
-            mapOf("user" to user, "host" to host)
+            mapOf("user" to user, "host" to host),
+            authorization
         )
     }
 
@@ -141,11 +143,12 @@ class EjabberdClient(
      * Returns the MUC affiliation of `jid` in `room` (mod_http_api
      * `get_room_affiliation`).
      */
-    fun getRoomAffiliation(room: String, service: String, jid: String): String {
+    fun getRoomAffiliation(room: String, service: String, jid: String, authorization: String = ""): String {
         log.debug("Getting affiliation for jid '{}' in room '{}' on service '{}'", jid, room, service)
         return postForString(
             "get_room_affiliation",
-            mapOf("room" to room, "service" to service, "jid" to jid)
+            mapOf("room" to room, "service" to service, "jid" to jid),
+            authorization
         ).replace("\"", "")
     }
 

@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito
 import java.util.Base64
+import java.util.Optional
 import java.util.UUID
 
 class TempRoomServiceTest {
@@ -21,11 +22,17 @@ class TempRoomServiceTest {
         operatorGroupRepository,
         operatorRepository,
         ejabberd,
-        "conference"
+        "conference",
+        "admin@localhost",
+        "admin"
     )
+    private val authorization: String
+        get() = "Basic " + Base64.getEncoder().encodeToString("admin@localhost:admin".toByteArray())
 
+    private val userId = UUID.randomUUID()
     private val groupId = UUID.randomUUID()
     private val operatorId = UUID.randomUUID()
+    private val room = "${userId.toString()}_${groupId}"
     private val operator = Operator(operatorId, "Operator", "operator", "operator@email.com")
     private val otherOperatorA = Operator(UUID.randomUUID(), "otherOperatorA", "other_a", "othera@email.com")
     private val otherOperatorB = Operator(UUID.randomUUID(), "otherOperatorB", "other_b", "otherb@email.com")
@@ -34,36 +41,29 @@ class TempRoomServiceTest {
     fun createOpensRoomAndAffiliatesUserAndGroupOperators() {
         Mockito.`when`(operatorGroupRepository.listOperatorsByGroupId(groupId))
             .thenReturn(listOf(otherOperatorA, otherOperatorB))
-        Mockito.`when`(operatorRepository.getUsernameById(otherOperatorA.id)).thenReturn("other_a")
-        Mockito.`when`(operatorRepository.getUsernameById(otherOperatorB.id)).thenReturn("other_b")
+        Mockito.`when`(operatorRepository.findById(otherOperatorA.id)).thenReturn(Optional.of(otherOperatorA))
+        Mockito.`when`(operatorRepository.findById(otherOperatorB.id)).thenReturn(Optional.of(otherOperatorB))
 
-        val response = service.create("John Doe", groupId, "support")
+        val response = service.create(userId,"John Doe", groupId, "support")
 
         val inOrder = Mockito.inOrder(ejabberd)
-        inOrder.verify(ejabberd).createRoom("johndoe", "support")
-        inOrder.verify(ejabberd).setRoomAffiliation("johndoe", "support", "John Doe", "member")
-        inOrder.verify(ejabberd).setRoomAffiliation("johndoe", "support", "other_a", "admin")
-        inOrder.verify(ejabberd).setRoomAffiliation("johndoe", "support", "other_b", "admin")
-        assertEquals(CreateTempRoomResponse("johndoe", "support"), response)
+        inOrder.verify(ejabberd).createRoom(room, "support", authorization)
+        inOrder.verify(ejabberd).setRoomAffiliation(room, "support", userId.toString(), "member", authorization)
+        inOrder.verify(ejabberd).setRoomAffiliation(room, "support", otherOperatorA.username, "admin", authorization)
+        inOrder.verify(ejabberd).setRoomAffiliation(room, "support", otherOperatorB.username, "admin", authorization)
+        assertEquals(CreateTempRoomResponse(room, "support"), response)
     }
 
     @Test
     fun createFallsBackToDefaultMucServiceWhenServiceIsNull() {
         Mockito.`when`(operatorGroupRepository.listOperatorsByGroupId(groupId)).thenReturn(emptyList())
 
-        val response = service.create("john.doe", groupId, null)
+        val response = service.create(userId, "John Doe", groupId, null)
 
         val inOrder = Mockito.inOrder(ejabberd)
-        inOrder.verify(ejabberd).createRoom("johndoe", "conference")
-        inOrder.verify(ejabberd).setRoomAffiliation("johndoe", "conference", "john.doe", "member")
-        assertEquals(CreateTempRoomResponse("johndoe", "conference"), response)
-    }
-
-    @Test
-    fun createRejectsUserWithoutValidLocalpart() {
-        assertFailsWith<InvalidSlugException> { service.create("a", groupId, null) }
-        assertFailsWith<InvalidSlugException> { service.create("!!?", groupId, null) }
-        Mockito.verifyNoInteractions(ejabberd)
+        inOrder.verify(ejabberd).createRoom(room, "conference", authorization)
+        inOrder.verify(ejabberd).setRoomAffiliation(room, "conference", userId.toString(), "member", authorization)
+        assertEquals(CreateTempRoomResponse(room, "conference"), response)
     }
 
     @Test
@@ -94,13 +94,13 @@ class TempRoomServiceTest {
 
     @Test
     fun removeRoomDestroysRoomOnGivenService() {
-        service.removeRoom("johndoe", "support")
-        Mockito.verify(ejabberd).destroyRoom("johndoe", "support")
+        service.removeRoom(room, "support")
+        Mockito.verify(ejabberd).destroyRoom(room, "support", authorization)
     }
 
     @Test
     fun removeRoomFallsBackToDefaultMucServiceWhenServiceIsNull() {
-        service.removeRoom("johndoe", null)
-        Mockito.verify(ejabberd).destroyRoom("johndoe", "conference")
+        service.removeRoom(room, null)
+        Mockito.verify(ejabberd).destroyRoom(room, "conference", authorization)
     }
 }
