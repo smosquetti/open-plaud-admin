@@ -10,8 +10,9 @@ database as the source of truth for **Operators** (XMPP users), **Groups**
 - **Membership** — an operator added to a group becomes an affiliated MUC
   member.
 - **Temp room** — a per-conversation MUC room; operators of the given group
-  are made admins so they can transfer the call, and only the joining
-  operator keeps access (everyone else is `outcast`).
+  are made admins and subscribed to the room's messages so they can
+  transfer the call, and only the joining operator keeps access
+  (everyone else is `outcast`).
 
 ## Tech stack
 
@@ -137,7 +138,7 @@ localpart are rejected.
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `POST` | `/chatroom` | Create a temp MUC room for `user` (slug of the username), affiliated `member`; every operator of `groupId` is set to `admin` |
+| `POST` | `/chatroom` | Create a temp MUC room for `user` (slug of the username), affiliated `member`; every operator of `groupId` is set to `admin` and subscribed to the room's messages (`urn:xmpp:mucsub:nodes:messages`) |
 | `POST` | `/join` | Operator joins the room: all *other* operators of the group are set to `outcast` |
 
 `POST /chatroom` request: `{ "user": "jane", "groupId": "…", "service": "conference" }`

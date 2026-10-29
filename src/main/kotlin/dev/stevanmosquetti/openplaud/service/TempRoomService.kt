@@ -49,6 +49,10 @@ class TempRoomService(
         return CreateTempRoomResponse(room, service?: mucService)
     }
 
+    /**
+     * Sets the affiliation of a temp MUC room for `user` (affiliation `admin`) and  
+     * subscribe the operator to the room so they can receive messages.
+     */
     fun setAffiliationAndSubscription(room: String, operatorId: UUID, affiliation: String, service: String?) {
         val operator: Optional<Operator> = operatorRepository.findById(operatorId)
         ejabberd.setRoomAffiliation(

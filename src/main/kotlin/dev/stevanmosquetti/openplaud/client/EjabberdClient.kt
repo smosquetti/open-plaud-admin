@@ -150,6 +150,9 @@ class EjabberdClient(
         ).replace("\"", "")
     }
 
+    /**
+     * Subscribe `user` to `room` (mod_http_api `subscribe_room`).
+     */
     fun setRoomSubscription(room: String, service: String, user: String, name: String) {
         log.debug("Subscribing user '{}' in room '{}' on service '{}'", user, room, service)
         val nodes = arrayOf("urn:xmpp:mucsub:nodes:messages")
