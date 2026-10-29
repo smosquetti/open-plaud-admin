@@ -109,14 +109,4 @@ class TempRoomService(
         log.info("Destroyed temporary MUC room '$room' in service '${service?: mucService}'")
     }
 
-    /**
-     * Slugifies the username; an invalid localpart becomes
-     * InvalidSlugException.
-     */
-    private fun slugify(user: String): String = try {
-        Slugifier.slugify(user)
-    } catch (e: IllegalArgumentException) {
-        throw InvalidSlugException(e.message ?: "The user does not produce a valid MUC room name")
-    }
-
 }
