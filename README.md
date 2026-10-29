@@ -138,11 +138,11 @@ localpart are rejected.
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `POST` | `/chatroom` | Create a temp MUC room for `user` (slug of the username), affiliated `member`; every operator of `groupId` is set to `admin` and subscribed to the room's messages (`urn:xmpp:mucsub:nodes:messages`) |
+| `POST` | `/chatroom` | Create a temp MUC room for `user` (slug of the username and groupId, snake_case), affiliated `member`; every operator of `groupId` is set to `admin` and subscribed to the room's messages (`urn:xmpp:mucsub:nodes:messages`) |
 | `POST` | `/join` | Operator joins the room: all *other* operators of the group are set to `outcast` |
 
-`POST /chatroom` request: `{ "user": "jane", "groupId": "…", "service": "conference" }`
-→ 201 `{ "room": "jane", "service": "conference" }`
+`POST /chatroom` request: `{ "user": "c04582c4-cf45-4191-a8ac-6d9b0b041c79", "name": "Jane Doe", "groupId": "c7fc5856-51f2-47d3-a0d2-ef26a6692200", "service": "conference" }`
+→ 201 `{ "room": "c04582c4-cf45-4191-a8ac-6d9b0b041c79_c7fc5856-51f2-47d3-a0d2-ef26a6692200", "service": "conference" }`
 
 `POST /join` request: `{ "operatorId": "…", "groupId": "…", "room": "jane" }` → 200
 

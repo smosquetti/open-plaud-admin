@@ -30,15 +30,20 @@ class TempRoomService(
      * Creates a temp MUC room for `user` (affiliation `member`) and makes every
      * operator of the group an admin of the room so they can transfer the call.
      */
-    fun create(user: String, groupId: UUID, service: String?): CreateTempRoomResponse {
-        val room = slugify(user)
+    fun create(user: UUID, name: String, groupId: UUID, service: String?): CreateTempRoomResponse {
+        val room = "${user}_${groupId}"
         ejabberd.createRoom(room, service?: mucService)
         ejabberd.setRoomAffiliation(
             room,
             service?: mucService,
-            user,
+            user.toString(),
             "member")
-
+        ejabberd.setRoomSubscription(
+            room,
+            service?: mucService,
+            user.toString(),
+            name
+        )
         val operators: List<Operator> = operatorGroupRepository.listOperatorsByGroupId(groupId)
         operators
             .forEach { op ->
@@ -53,7 +58,7 @@ class TempRoomService(
      * Sets the affiliation of a temp MUC room for `user` (affiliation `admin`) and  
      * subscribe the operator to the room so they can receive messages.
      */
-    fun setAffiliationAndSubscription(room: String, operatorId: UUID, affiliation: String, service: String?) {
+    private fun setAffiliationAndSubscription(room: String, operatorId: UUID, affiliation: String, service: String?) {
         val operator: Optional<Operator> = operatorRepository.findById(operatorId)
         ejabberd.setRoomAffiliation(
             room,
@@ -85,6 +90,15 @@ class TempRoomService(
                     "outcast")
             }
         log.info("Operator $operatorId joined room '$room'; outcast ${otherOperators.size} other operator(s) of group $groupId")
+    }
+
+    fun transferToAnotherOperator(room: String, operatorId: UUID, previousOperatorId: UUID, service: String?) {
+        setAffiliationAndSubscription(room, operatorId, "admin", service?: mucService)
+        ejabberd.setRoomAffiliation(
+            room,
+            service?: mucService,
+            operatorRepository.getUsernameById(previousOperatorId),
+            "outcast")
     }
 
     /**
