@@ -73,7 +73,7 @@ class GroupService(
     }
 
     fun getListOfOperatorsForTheGroup(groupId: UUID): List<OperatorResponse> {
-        ejabberd.checkAdminAccess()
+        ejabberd.checkOperatorAccess()
         return operatorGroupRepository.listOperatorsByGroupId(groupId)
             .map {
                 o -> OperatorResponse(o.id, o.name, o.email, o.username)

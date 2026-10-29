@@ -125,7 +125,7 @@ localpart are rejected.
 | --- | --- | --- |
 | `POST` | `/groups` | Create a group: persistent MUC room + `groups` row |
 | `GET` | `/groups` | List all groups; served from the Redis cache (5 min TTL, evicted on create/delete) |
-| `GET` | `/groups/{groupId}/operators` | List the operators of the group; requires admin Basic auth |
+| `GET` | `/groups/{groupId}/operators` | List the operators of the group |
 | `POST` | `/groups/{groupId}/operators/{operatorId}` | Add operator to group (MUC affiliation `member`) |
 | `DELETE` | `/groups/{groupId}/operators/{operatorId}` | Remove operator from group (affiliation `none`) |
 | `DELETE` | `/groups/{groupId}` | Remove group (destroys the MUC room, deletes membership rows) |
