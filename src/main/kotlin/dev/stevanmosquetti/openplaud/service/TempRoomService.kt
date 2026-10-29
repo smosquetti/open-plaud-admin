@@ -21,10 +21,15 @@ class TempRoomService(
     private val operatorGroupRepository: OperatorGroupRepository,
     private val operatorRepository: OperatorRepository,
     private val ejabberd: EjabberdClient,
-    @Value("\${ejabberd.muc-service}") var mucService: String,
+    @Value("\${ejabberd.muc-service}") var mucService: String,,
+    @Value("\${ejabberd.username}") val adminUsername: String,
+    @Value("\${ejabberd.password}") val adminPassword: String,
 ) {
 
     private val log = LoggerFactory.getLogger(TempRoomService::class.java)
+    
+    private val authorization: String
+        get() = "Basic ${java.util.Base64.getEncoder().encodeToString("$adminUsername:$adminPassword".toByteArray())}"
 
     /**
      * Creates a temp MUC room for `user` (affiliation `member`) and makes every
@@ -32,18 +37,19 @@ class TempRoomService(
      */
     fun create(user: UUID, name: String, groupId: UUID, service: String?): CreateTempRoomResponse {
         val room = "${user}_${groupId}"
-        ejabberd.createRoom(room, service?: mucService)
+        ejabberd.createRoom(room, service?: mucService, authorization)
         ejabberd.setRoomAffiliation(
             room,
             service?: mucService,
             user.toString(),
-            "member")
+            "member",
+            authorization)
         ejabberd.setRoomSubscription(
             room,
             service?: mucService,
             user.toString(),
-            name
-        )
+            name, 
+            authorization)
         val operators: List<Operator> = operatorGroupRepository.listOperatorsByGroupId(groupId)
         operators
             .forEach { op ->
@@ -64,13 +70,14 @@ class TempRoomService(
             room,
             service?: mucService,
             operator.get().username,
-            affiliation)
+            affiliation, 
+            authorization)
         ejabberd.setRoomSubscription(
             room,
             service?: mucService,
             operator.get().username,
-            operator.get().name
-        )
+            operator.get().name, 
+            authorization)
         log.info("Set room affiliation and subscription for user '${operator.get().username}' in MUC room '$room' service '${service?: mucService}'")
     }
 
@@ -105,7 +112,7 @@ class TempRoomService(
      * Destroys the temp MUC room on ejabberd.
      */
     fun removeRoom(room: String, service: String?) {
-        ejabberd.destroyRoom(room, service?: mucService)
+        ejabberd.destroyRoom(room, service?: mucService, authorization)
         log.info("Destroyed temporary MUC room '$room' in service '${service?: mucService}'")
     }
 

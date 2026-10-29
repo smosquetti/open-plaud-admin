@@ -26,14 +26,10 @@ class EjabberdClient(
     @Value("\${ejabberd.base-url}") baseUrl: String,
     @Value("\${ejabberd.host}") val host: String,
     @Value("\${ejabberd.username}") val adminUsername: String,
-    @Value("\${ejabberd.password}") val adminPassword: String,
 ) {
 
     private val log = LoggerFactory.getLogger(EjabberdClient::class.java)
     
-    private val authorization: String
-        get() = "Basic ${java.util.Base64.getEncoder().encodeToString("$adminUsername:$adminPassword".toByteArray())}"
-
     private val restClient: RestClient = RestClient.builder()
         .baseUrl(baseUrl)
         .build()
@@ -75,7 +71,7 @@ class EjabberdClient(
      * Creates a non-persistent, members-only MUC room (mod_http_api
      * `create_room_with_opts`).
      */
-    fun createRoom(room: String, service: String) {
+    fun createRoom(room: String, service: String, authorization: String) {
         log.debug("Creating MUC room '{}' on service '{}'", room, service)
         postForStatus(
             "create_room_with_opts",
@@ -84,7 +80,8 @@ class EjabberdClient(
                 "service" to service,
                 "host" to host,
                 "options" to listOf(mapOf("name" to "members_only", "value" to "true")),
-            )
+            ),
+            authorization
         )
     }
 
@@ -112,11 +109,12 @@ class EjabberdClient(
      * or temp room, and to compensate a room creation whose database row could not
      * be persisted.
      */
-    fun destroyRoom(room: String, service: String) {
+    fun destroyRoom(room: String, service: String, authorization: String = "") {
         log.debug("Destroying MUC room '{}' on service '{}'", room, service)
         postForStatus(
             "destroy_room",
-            mapOf("room" to room, "service" to service)
+            mapOf("room" to room, "service" to service),
+            authorization
         )
     }
 
@@ -124,7 +122,7 @@ class EjabberdClient(
      * Sets the MUC affiliation of `user` in `room` (mod_http_api
      * `set_room_affiliation`).
      */
-    fun setRoomAffiliation(room: String, service: String, user: String, affiliation: String = "member") {
+    fun setRoomAffiliation(room: String, service: String, user: String, affiliation: String = "member", authorization: String = "") {
         log.debug("Setting affiliation '{}' for user '{}' in room '{}' on service '{}'", affiliation, user, room, service)
         postForStatus(
             "set_room_affiliation",
@@ -134,7 +132,8 @@ class EjabberdClient(
                 "user" to user,
                 "host" to host,
                 "affiliation" to affiliation,
-            )
+            ),
+            authorization
         )
     }
 
@@ -153,7 +152,7 @@ class EjabberdClient(
     /**
      * Subscribe `user` to `room` (mod_http_api `subscribe_room`).
      */
-    fun setRoomSubscription(room: String, service: String, user: String, name: String) {
+    fun setRoomSubscription(room: String, service: String, user: String, name: String, authorization: String = "") {
         log.debug("Subscribing user '{}' in room '{}' on service '{}'", user, room, service)
         val nodes = arrayOf("urn:xmpp:mucsub:nodes:messages")
         postForStatus(
@@ -165,7 +164,8 @@ class EjabberdClient(
                 "room" to room,
                 "service" to service,
                 "nodes" to nodes
-            )
+            ),
+            authorization
         )
 
     }
@@ -226,7 +226,7 @@ class EjabberdClient(
      * Posts a command to mod_http_api and throws EjabberdException on a non-2xx
      * response.
      */
-    private fun postForStatus(command: String, body: Any) {
+    private fun postForStatus(command: String, body: Any, authorization: String = "") {
         restClient.post()
             .uri("/$command")
             .contentType(MediaType.APPLICATION_JSON)
@@ -242,7 +242,7 @@ class EjabberdClient(
     /**
      * Posts a command to mod_http_api and returns the response body as a string.
      */
-    private fun postForString(command: String, body: Any): String {
+    private fun postForString(command: String, body: Any, authorization: String = ""): String {
         return restClient.post()
             .uri("/$command")
             .contentType(MediaType.APPLICATION_JSON)
