@@ -149,6 +149,23 @@ class EjabberdClient(
             mapOf("room" to room, "service" to service, "jid" to jid)
         ).replace("\"", "")
     }
+
+    fun setRoomSubscription(room: String, service: String, user: String, name: String) {
+        log.debug("Subscribing user '{}' in room '{}' on service '{}'", user, room, service)
+        val nodes = arrayOf("urn:xmpp:mucsub:nodes:messages")
+        postForStatus(
+            "subscribe_room",
+            mapOf(
+                "user" to user,
+                "host" to host,
+                "nick" to name,
+                "room" to room,
+                "service" to service,
+                "nodes" to nodes
+            )
+        )
+
+    }
     
     /**
      * Verifies the caller's operator credentials via `check_password` and returns

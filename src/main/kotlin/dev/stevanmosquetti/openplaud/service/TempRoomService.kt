@@ -9,6 +9,7 @@ import dev.stevanmosquetti.openplaud.slugify.Slugifier
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
+import java.util.Optional
 import java.util.UUID
 
 /**
@@ -41,15 +42,27 @@ class TempRoomService(
         val operators: List<Operator> = operatorGroupRepository.listOperatorsByGroupId(groupId)
         operators
             .forEach { op ->
-                ejabberd.setRoomAffiliation(
-                    room,
-                    service?: mucService,
-                    operatorRepository.getUsernameById(op.id),
-                    "admin")
+                setAffiliationAndSubscription(room, op.id, "admin", service?: mucService)
             }
 
         log.info("Created temporary MUC room '$room' for user '$user' in service '${service?: mucService}'")
         return CreateTempRoomResponse(room, service?: mucService)
+    }
+
+    fun setAffiliationAndSubscription(room: String, operatorId: UUID, affiliation: String, service: String?) {
+        val operator: Optional<Operator> = operatorRepository.findById(operatorId)
+        ejabberd.setRoomAffiliation(
+            room,
+            service?: mucService,
+            operator.get().username,
+            affiliation)
+        ejabberd.setRoomSubscription(
+            room,
+            service?: mucService,
+            operator.get().username,
+            operator.get().name
+        )
+        log.info("Set room affiliation and subscription for user '${operator.get().username}' in MUC room '$room' service '${service?: mucService}'")
     }
 
     /**
