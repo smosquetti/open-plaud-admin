@@ -26,9 +26,13 @@ class EjabberdClient(
     @Value("\${ejabberd.base-url}") baseUrl: String,
     @Value("\${ejabberd.host}") val host: String,
     @Value("\${ejabberd.username}") val adminUsername: String,
+    @Value("\${ejabberd.password}") val adminPassword: String,
 ) {
 
     private val log = LoggerFactory.getLogger(EjabberdClient::class.java)
+
+    private val authorization: String
+        get() = "Basic ${java.util.Base64.getEncoder().encodeToString("$adminUsername:$adminPassword".toByteArray())}"
     
     private val restClient: RestClient = RestClient.builder()
         .baseUrl(baseUrl)
@@ -60,12 +64,11 @@ class EjabberdClient(
      * Unregisters a user from the server (mod_http_api `unregister`). Used to compensate
      * a registration whose database row could not be persisted.
      */
-    fun unregisterUser(user: String, authorization: String = "") {
+    fun unregisterUser(user: String) {
         log.debug("Unregistering XMPP user '{}'", user)
         postForStatus(
             "unregister",
-            mapOf("user" to user, "host" to host),
-            authorization
+            mapOf("user" to user, "host" to host)
         )
     }
 
@@ -73,7 +76,7 @@ class EjabberdClient(
      * Creates a non-persistent, members-only MUC room (mod_http_api
      * `create_room_with_opts`).
      */
-    fun createRoom(room: String, service: String, authorization: String) {
+    fun createRoom(room: String, service: String) {
         log.debug("Creating MUC room '{}' on service '{}'", room, service)
         postForStatus(
             "create_room_with_opts",
@@ -82,8 +85,7 @@ class EjabberdClient(
                 "service" to service,
                 "host" to host,
                 "options" to listOf(mapOf("name" to "members_only", "value" to "true")),
-            ),
-            authorization
+            )
         )
     }
 
@@ -111,12 +113,11 @@ class EjabberdClient(
      * or temp room, and to compensate a room creation whose database row could not
      * be persisted.
      */
-    fun destroyRoom(room: String, service: String, authorization: String = "") {
+    fun destroyRoom(room: String, service: String) {
         log.debug("Destroying MUC room '{}' on service '{}'", room, service)
         postForStatus(
             "destroy_room",
-            mapOf("room" to room, "service" to service),
-            authorization
+            mapOf("room" to room, "service" to service)
         )
     }
 
@@ -124,7 +125,7 @@ class EjabberdClient(
      * Sets the MUC affiliation of `user` in `room` (mod_http_api
      * `set_room_affiliation`).
      */
-    fun setRoomAffiliation(room: String, service: String, user: String, affiliation: String = "member", authorization: String = "") {
+    fun setRoomAffiliation(room: String, service: String, user: String, affiliation: String = "member") {
         log.debug("Setting affiliation '{}' for user '{}' in room '{}' on service '{}'", affiliation, user, room, service)
         postForStatus(
             "set_room_affiliation",
@@ -134,8 +135,7 @@ class EjabberdClient(
                 "user" to user,
                 "host" to host,
                 "affiliation" to affiliation,
-            ),
-            authorization
+            )
         )
     }
 
@@ -143,19 +143,18 @@ class EjabberdClient(
      * Returns the MUC affiliation of `jid` in `room` (mod_http_api
      * `get_room_affiliation`).
      */
-    fun getRoomAffiliation(room: String, service: String, jid: String, authorization: String = ""): String {
+    fun getRoomAffiliation(room: String, service: String, jid: String): String {
         log.debug("Getting affiliation for jid '{}' in room '{}' on service '{}'", jid, room, service)
         return postForString(
             "get_room_affiliation",
-            mapOf("room" to room, "service" to service, "jid" to jid),
-            authorization
+            mapOf("room" to room, "service" to service, "jid" to jid)
         ).replace("\"", "")
     }
 
     /**
      * Subscribe `user` to `room` (mod_http_api `subscribe_room`).
      */
-    fun setRoomSubscription(room: String, service: String, user: String, name: String, authorization: String = "") {
+    fun setRoomSubscription(room: String, service: String, user: String, name: String) {
         log.debug("Subscribing user '{}' in room '{}' on service '{}'", user, room, service)
         val nodes = arrayOf("urn:xmpp:mucsub:nodes:messages")
         postForStatus(
@@ -167,8 +166,7 @@ class EjabberdClient(
                 "room" to room,
                 "service" to service,
                 "nodes" to nodes
-            ),
-            authorization
+            )
         )
 
     }
@@ -229,11 +227,11 @@ class EjabberdClient(
      * Posts a command to mod_http_api and throws EjabberdException on a non-2xx
      * response.
      */
-    private fun postForStatus(command: String, body: Any, authorization: String = "") {
+    private fun postForStatus(command: String, body: Any) {
         restClient.post()
             .uri("/$command")
             .contentType(MediaType.APPLICATION_JSON)
-            .header(HttpHeaders.AUTHORIZATION, getAuthorizationHeader()?: authorization)
+            .header(HttpHeaders.AUTHORIZATION, authorization)
             .body(objectToJsonString(body))
             .exchange { _, response ->
                 if (!response.statusCode.is2xxSuccessful()) {
@@ -245,11 +243,11 @@ class EjabberdClient(
     /**
      * Posts a command to mod_http_api and returns the response body as a string.
      */
-    private fun postForString(command: String, body: Any, authorization: String = ""): String {
+    private fun postForString(command: String, body: Any): String {
         return restClient.post()
             .uri("/$command")
             .contentType(MediaType.APPLICATION_JSON)
-            .header(HttpHeaders.AUTHORIZATION, getAuthorizationHeader()?: authorization)
+            .header(HttpHeaders.AUTHORIZATION, authorization)
             .body(objectToJsonString(body))
             .exchange { _, response ->
                 if (!response.statusCode.is2xxSuccessful()) {

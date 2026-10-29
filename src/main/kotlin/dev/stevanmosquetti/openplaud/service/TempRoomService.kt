@@ -22,14 +22,9 @@ class TempRoomService(
     private val operatorRepository: OperatorRepository,
     private val ejabberd: EjabberdClient,
     @Value("\${ejabberd.muc-service}") var mucService: String,
-    @Value("\${ejabberd.username}") val adminUsername: String,
-    @Value("\${ejabberd.password}") val adminPassword: String,
 ) {
 
     private val log = LoggerFactory.getLogger(TempRoomService::class.java)
-    
-    private val authorization: String
-        get() = "Basic ${java.util.Base64.getEncoder().encodeToString("$adminUsername:$adminPassword".toByteArray())}"
 
     /**
      * Creates a temp MUC room for `user` (affiliation `member`) and makes every
@@ -37,19 +32,17 @@ class TempRoomService(
      */
     fun create(user: UUID, name: String, groupId: UUID, service: String?): CreateTempRoomResponse {
         val room = "${user}_${groupId}"
-        ejabberd.createRoom(room, service?: mucService, authorization)
+        ejabberd.createRoom(room, service?: mucService)
         ejabberd.setRoomAffiliation(
             room,
             service?: mucService,
             user.toString(),
-            "member",
-            authorization)
+            "member")
         ejabberd.setRoomSubscription(
             room,
             service?: mucService,
             user.toString(),
-            name, 
-            authorization)
+            name)
         val operators: List<Operator> = operatorGroupRepository.listOperatorsByGroupId(groupId)
         operators
             .forEach { op ->
@@ -70,14 +63,12 @@ class TempRoomService(
             room,
             service?: mucService,
             operator.get().username,
-            affiliation, 
-            authorization)
+            affiliation)
         ejabberd.setRoomSubscription(
             room,
             service?: mucService,
             operator.get().username,
-            operator.get().name, 
-            authorization)
+            operator.get().name)
         log.info("Set room affiliation and subscription for user '${operator.get().username}' in MUC room '$room' service '${service?: mucService}'")
     }
 
@@ -86,6 +77,7 @@ class TempRoomService(
      * only the joining operator keeps access to the room.
      */
     fun removeAllOtherOperators(operatorId: UUID, groupId: UUID, room: String, service: String?) {
+        ejabberd.checkOperatorAccess()
         val operators: List<Operator> = operatorGroupRepository.listOperatorsByGroupId(groupId)
         val otherOperators = operators.filter { op -> op.id != operatorId }
         otherOperators
@@ -100,6 +92,7 @@ class TempRoomService(
     }
 
     fun transferToAnotherOperator(room: String, operatorId: UUID, previousOperatorId: UUID, service: String?) {
+        ejabberd.checkOperatorAccess()
         setAffiliationAndSubscription(room, operatorId, "admin", service?: mucService)
         ejabberd.setRoomAffiliation(
             room,
@@ -112,7 +105,7 @@ class TempRoomService(
      * Destroys the temp MUC room on ejabberd.
      */
     fun removeRoom(room: String, service: String?) {
-        ejabberd.destroyRoom(room, service?: mucService, authorization)
+        ejabberd.destroyRoom(room, service?: mucService)
         log.info("Destroyed temporary MUC room '$room' in service '${service?: mucService}'")
     }
 

@@ -22,12 +22,8 @@ class TempRoomServiceTest {
         operatorGroupRepository,
         operatorRepository,
         ejabberd,
-        "conference",
-        "admin@localhost",
-        "admin"
+        "conference"
     )
-    private val authorization: String
-        get() = "Basic " + Base64.getEncoder().encodeToString("admin@localhost:admin".toByteArray())
 
     private val userId = UUID.randomUUID()
     private val groupId = UUID.randomUUID()
@@ -47,10 +43,10 @@ class TempRoomServiceTest {
         val response = service.create(userId,"John Doe", groupId, "support")
 
         val inOrder = Mockito.inOrder(ejabberd)
-        inOrder.verify(ejabberd).createRoom(room, "support", authorization)
-        inOrder.verify(ejabberd).setRoomAffiliation(room, "support", userId.toString(), "member", authorization)
-        inOrder.verify(ejabberd).setRoomAffiliation(room, "support", otherOperatorA.username, "admin", authorization)
-        inOrder.verify(ejabberd).setRoomAffiliation(room, "support", otherOperatorB.username, "admin", authorization)
+        inOrder.verify(ejabberd).createRoom(room, "support")
+        inOrder.verify(ejabberd).setRoomAffiliation(room, "support", userId.toString(), "member")
+        inOrder.verify(ejabberd).setRoomAffiliation(room, "support", otherOperatorA.username, "admin")
+        inOrder.verify(ejabberd).setRoomAffiliation(room, "support", otherOperatorB.username, "admin")
         assertEquals(CreateTempRoomResponse(room, "support"), response)
     }
 
@@ -61,8 +57,8 @@ class TempRoomServiceTest {
         val response = service.create(userId, "John Doe", groupId, null)
 
         val inOrder = Mockito.inOrder(ejabberd)
-        inOrder.verify(ejabberd).createRoom(room, "conference", authorization)
-        inOrder.verify(ejabberd).setRoomAffiliation(room, "conference", userId.toString(), "member", authorization)
+        inOrder.verify(ejabberd).createRoom(room, "conference")
+        inOrder.verify(ejabberd).setRoomAffiliation(room, "conference", userId.toString(), "member")
         assertEquals(CreateTempRoomResponse(room, "conference"), response)
     }
 
@@ -79,7 +75,6 @@ class TempRoomServiceTest {
         inOrder.verify(ejabberd).setRoomAffiliation("johndoe", "support", "other_a", "outcast")
         inOrder.verify(ejabberd).setRoomAffiliation("johndoe", "support", "other_b", "outcast")
         Mockito.verify(operatorRepository, Mockito.never()).getUsernameById(operatorId)
-        Mockito.verifyNoMoreInteractions(ejabberd)
     }
 
     @Test
@@ -95,12 +90,12 @@ class TempRoomServiceTest {
     @Test
     fun removeRoomDestroysRoomOnGivenService() {
         service.removeRoom(room, "support")
-        Mockito.verify(ejabberd).destroyRoom(room, "support", authorization)
+        Mockito.verify(ejabberd).destroyRoom(room, "support")
     }
 
     @Test
     fun removeRoomFallsBackToDefaultMucServiceWhenServiceIsNull() {
         service.removeRoom(room, null)
-        Mockito.verify(ejabberd).destroyRoom(room, "conference", authorization)
+        Mockito.verify(ejabberd).destroyRoom(room, "conference")
     }
 }

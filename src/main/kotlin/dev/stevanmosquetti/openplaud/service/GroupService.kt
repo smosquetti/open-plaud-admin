@@ -58,6 +58,7 @@ class GroupService(
      */
     @CacheEvict(GROUPS_CACHE, allEntries = true)
     fun create(name: String, service: String): GroupResponse {
+        ejabberd.checkAdminAccess()
         val room = slugify(name)
         requireRoomFree(room)
         ejabberd.createPersistentRoom(room, service)
@@ -86,6 +87,7 @@ class GroupService(
      * the membership row.
      */
     fun addOperatorToGroup(groupId: UUID, operatorId: UUID) {
+        ejabberd.checkAdminAccess()
         val group = requireGroup(groupId)
         val operator = requireOperator(operatorId)
         val key = OperatorGroupId(operatorId, groupId)
@@ -114,6 +116,7 @@ class GroupService(
      * deletes the membership row.
      */
     fun removeOperatorFromGroup(groupId: UUID, operatorId: UUID) {
+        ejabberd.checkAdminAccess()
         val key = OperatorGroupId(operatorId, groupId)
         operatorGroupRepository.findById(key)
             .orElseThrow { NotFoundException("Operator $operatorId is not a member of group $groupId") }
@@ -132,6 +135,7 @@ class GroupService(
      */
     @CacheEvict(GROUPS_CACHE, allEntries = true)
     fun removeRoom(groupId: UUID) {
+        ejabberd.checkAdminAccess()
         val group = requireGroup(groupId)
         operatorGroupRepository.deleteByGroup(group.id)
         groupRepository.deleteById(group.id)

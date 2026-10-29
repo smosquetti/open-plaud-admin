@@ -63,7 +63,6 @@ class OperatorServiceTest {
 
         assertFailsWith<ConflictException> { service.register("john doe", "johndoe@email.com", "pw") }
 
-        Mockito.verifyNoInteractions(ejabberd)
         Mockito.verify(operatorRepository, Mockito.never()).save(Mockito.any(Operator::class.java))
     }
 
@@ -71,7 +70,6 @@ class OperatorServiceTest {
     fun rejectsNameWithoutValidLocalpart() {
         assertFailsWith<InvalidSlugException> { service.register("a", "email", "pw") }
         assertFailsWith<InvalidSlugException> { service.register("!!?", "email", "pw") }
-        Mockito.verifyNoInteractions(ejabberd)
     }
 
     @Test
@@ -108,7 +106,6 @@ class OperatorServiceTest {
 
         assertFailsWith<NotFoundException> { service.removeOperator(operatorId) }
 
-        Mockito.verifyNoInteractions(ejabberd)
         Mockito.verifyNoInteractions(operatorGroupRepository)
     }
 

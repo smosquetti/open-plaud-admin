@@ -99,13 +99,13 @@ class AdminApiIntegrationTest @Autowired constructor(
         assertTrue(operatorGroupRepository.existsByOperatorIdAndGroupId(operatorId!!, groupId!!))
 
         // 4. Membership is visible on the XMPP server
-        assertEquals("member", ejabberd.getRoomAffiliation(room!!, service!!, "$xmppUser@${ejabberd.host}", authorization))
+        assertEquals("member", ejabberd.getRoomAffiliation(room!!, service!!, "$xmppUser@${ejabberd.host}"))
 
         // 5. Remove operator from group: affiliation cleared + row deleted
         val (removeStatus, _) = send(HttpMethod.DELETE, "/api/v1/groups/$groupId/operators/$operatorId")
         assertEquals(204, removeStatus)
         assertTrue(!operatorGroupRepository.existsByOperatorIdAndGroupId(operatorId!!, groupId!!))
-        assertEquals("none", ejabberd.getRoomAffiliation(room!!, service!!, "$xmppUser@${ejabberd.host}", authorization))
+        assertEquals("none", ejabberd.getRoomAffiliation(room!!, service!!, "$xmppUser@${ejabberd.host}"))
     }
 
     @AfterEach
@@ -130,14 +130,14 @@ class AdminApiIntegrationTest @Autowired constructor(
         }
         xmppUser?.let {
             try {
-                ejabberd.unregisterUser(it, authorization)
+                ejabberd.unregisterUser(it)
             } catch (e: Exception) {
                 log.warn("Cleanup: could not unregister XMPP user $it", e)
             }
         }
         room?.let {
             try {
-                ejabberd.destroyRoom(it, service!!, authorization)
+                ejabberd.destroyRoom(it, service!!)
             } catch (e: Exception) {
                 log.warn("Cleanup: could not destroy MUC room $it", e)
             }

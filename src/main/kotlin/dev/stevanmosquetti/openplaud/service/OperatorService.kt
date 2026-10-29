@@ -57,6 +57,7 @@ class OperatorService(
      * response.
      */
     fun register(name: String, email: String, password: String?): OperatorResponse {
+        ejabberd.checkAdminAccess()
         val xmppUser = slugify(name)
         requireXmppUserFree(xmppUser)
         val actualPassword = password ?: generatePassword()
@@ -102,6 +103,7 @@ class OperatorService(
      * unregisters the XMPP user.
      */
     fun removeOperator(operatorId: UUID) {
+        ejabberd.checkAdminAccess()
         val operator = requireOperator(operatorId)
         operatorGroupRepository.deleteByOperator(operator.id)
         operatorRepository.deleteById(operator.id)

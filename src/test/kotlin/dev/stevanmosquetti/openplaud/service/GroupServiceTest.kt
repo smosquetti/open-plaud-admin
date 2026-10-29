@@ -58,15 +58,12 @@ class GroupServiceTest {
             Group(name = "Support Team", node = "supportteam", service = "supportservice")))
 
         assertFailsWith<ConflictException> { service.create("support team", "supportservice") }
-
-        Mockito.verifyNoInteractions(ejabberd)
     }
 
     @Test
     fun rejectsGroupNameWithoutValidRoom() {
         assertFailsWith<InvalidSlugException> { service.create("a", "supportservice") }
         assertFailsWith<InvalidSlugException> { service.create("!!?", "supportservice") }
-        Mockito.verifyNoInteractions(ejabberd)
     }
 
     @Test
@@ -106,8 +103,6 @@ class GroupServiceTest {
         Mockito.`when`(operatorRepository.findById(operatorId)).thenReturn(Optional.empty())
 
         assertFailsWith<NotFoundException> { service.addOperatorToGroup(groupId, operatorId) }
-
-        Mockito.verifyNoInteractions(ejabberd)
     }
 
     @Test
@@ -116,8 +111,6 @@ class GroupServiceTest {
         Mockito.`when`(groupRepository.findById(groupId)).thenReturn(Optional.empty())
 
         assertFailsWith<NotFoundException> { service.addOperatorToGroup(groupId, operatorId) }
-
-        Mockito.verifyNoInteractions(ejabberd)
     }
 
     @Test
@@ -127,8 +120,6 @@ class GroupServiceTest {
         Mockito.`when`(operatorGroupRepository.existsByOperatorIdAndGroupId(operatorId, groupId)).thenReturn(true)
 
         assertFailsWith<ConflictException> { service.addOperatorToGroup(groupId, operatorId) }
-
-        Mockito.verifyNoInteractions(ejabberd)
     }
 
     @Test
@@ -168,8 +159,6 @@ class GroupServiceTest {
         Mockito.`when`(operatorGroupRepository.findById(key)).thenReturn(Optional.empty())
 
         assertFailsWith<NotFoundException> { service.removeOperatorFromGroup(groupId, operatorId) }
-
-        Mockito.verifyNoInteractions(ejabberd)
     }
 
     @Test
@@ -190,7 +179,6 @@ class GroupServiceTest {
 
         assertFailsWith<NotFoundException> { service.removeRoom(groupId) }
 
-        Mockito.verifyNoInteractions(ejabberd)
         Mockito.verifyNoInteractions(operatorGroupRepository)
     }
 

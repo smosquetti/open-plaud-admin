@@ -58,7 +58,8 @@ class EjabberdClientTest {
         client = EjabberdClient(
             "http://${address.hostName}:${address.port}/api",
             "localhost",
-            "admin@localhost"
+            "admin@localhost",
+            "admin"
         )
 
     }
@@ -145,7 +146,7 @@ class EjabberdClientTest {
 
     @Test
     fun createRoomPostsMembersOnlyOption() {
-        client.createRoom("johndoe", "support", authorization)
+        client.createRoom("johndoe", "support")
 
         val request = lastRequest()
         assertEquals("/api/create_room_with_opts", request.path)
